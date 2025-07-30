@@ -2,17 +2,130 @@ use embedded_hal::i2c::I2c;
 use heapless::Vec;
 
 /// SH1107G I2C OLEDドライバ
+// sh1107g-driver/src/lib.rs
+
+// 既存のSh1107g構造体はそのまま残す
 pub struct Sh1107g<I2C> {
     i2c: I2C,
     address: u8,
+    // 必要に応じて、DisplayRotationやDisplaySizeなどの設定をここに保持する
+    // 今回はBuilderで設定し、最終的なSh1107gに渡す形にするため、直接は持たせない
 }
 
+// Builder構造体
+pub struct Sh1107gBuilder<I2C> {
+    i2c: Option<I2C>, // I2CインスタンスはOptionで、後から設定される
+    address: u8,      // デフォルトアドレスを設定しておくか、Optionにする
+    // ここに、初期化に必要な他の設定値（例: サイズ、回転など）を追加
+    // size: Option<DisplaySize>, // DisplaySize構造体が定義されていれば
+    // rotation: DisplayRotation, // デフォルト値を持たせるかOptionにする
+}
+
+// （仮）DisplaySizeとDisplayRotationの定義
+// これらはembedded-graphicsクレートから提供されることが多いですが、
+// まずは仮で定義しておきます。
+// 後でembedded-graphicsを導入するときに置き換えます。
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct DisplaySize {
+    pub width: u16,
+    pub height: u16,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum DisplayRotation {
+    Rotate0,
+    Rotate90,
+    Rotate180,
+    Rotate270,
+}
+// デフォルト値
+impl Default for DisplayRotation {
+    fn default() -> Self {
+        DisplayRotation::Rotate0
+    }
+}
+
+// Sh1107gBuilder の impl ブロック
+impl<I2C> Sh1107gBuilder<I2C> {
+    /// 新しいBuilderインスタンスを作成する。
+    /// デフォルトのI2Cアドレスを指定する。
+    pub fn new() -> Self {
+        Self {
+            i2c: None,
+            address: 0x3C, // デフォルトI2Cアドレス (0x3Cは一般的)
+            // size: None,
+            // rotation: DisplayRotation::default(),
+        }
+    }
+
+    /// I2Cインターフェースを接続する。
+    pub fn connect_i2c(mut self, i2c: I2C) -> Self {
+        self.i2c = Some(i2c);
+        self
+    }
+
+    /// I2Cアドレスを設定する。
+    pub fn with_address(mut self, address: u8) -> Self {
+        self.address = address;
+        self
+    }
+
+    // 必要に応じて他の設定メソッドを追加
+    // 例えば、ディスプレイサイズを設定するメソッド
+    // pub fn with_size(mut self, size: DisplaySize) -> Self {
+    //     self.size = Some(size);
+    //     self
+    // }
+
+    // ディスプレイの回転を設定するメソッド
+    // pub fn with_rotation(mut self, rotation: DisplayRotation) -> Self {
+    //     self.rotation = rotation;
+    //     self
+    // }
+}
+
+// Sh1107gBuilder の impl ブロック内 (続き)
+
+impl<I2C, E> Sh1107gBuilder<I2C>
+where
+    I2C: embedded_hal::i2c::I2c<Error = E>,
+{
+    /// 設定に基づきSh1107gインスタンスを構築する。
+    pub fn build(self) -> Result<Sh1107g<I2C>, BuilderError> {
+        let i2c = self.i2c.ok_or(BuilderError::NoI2cConnected)?;
+        // let size = self.size.ok_or(BuilderError::NoDisplaySizeDefined)?; // サイズが必須の場合
+
+        let mut oled = Sh1107g {
+            i2c,
+            address: self.address,
+            // size: size,
+            // rotation: self.rotation,
+        };
+
+        // ここでディスプレイの初期化を自動的に行っても良いし、
+        // build() はインスタンスの作成のみに責任を持ち、init() は別途呼び出すようにしても良い。
+        // 今回はシンプルにインスタンス作成まで。
+        Ok(oled)
+    }
+}
+
+// Builderパターンで発生しうるエラーを定義
+#[derive(Debug)]
+pub enum BuilderError {
+    NoI2cConnected,
+    // NoDisplaySizeDefined, // サイズが必須の場合
+}
+// embedded-halのErrorトレイトにも対応させる必要があるかもしれません
+// impl embedded_hal::i2c::Error for BuilderError { ... }
+// impl From<BuilderError> for YourDriverError { ... } など
+
+// Sh1107g の impl ブロック
 impl<I2C, E> Sh1107g<I2C>
 where
-    I2C: I2c<Error = E>,
+    I2C: embedded_hal::i2c::I2c<Error = E>,
 {
     /// 新しいドライバインスタンスを作成
-    pub fn new(i2c: I2C, address: u8) -> Self {
+    fn new(i2c: I2C, address: u8) -> Self {
         Self { i2c, address }
     }
 
