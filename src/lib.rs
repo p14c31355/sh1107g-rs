@@ -2,9 +2,9 @@ use embedded_hal::i2c::I2c;
 use heapless::Vec;
 
 use embedded_graphics_core::{
-    draw_target::{DrawTarget, self},
-    geometry::{Point, Size},
-    pixelcolor::{BinaryColor, PixelColor},
+    draw_target::DrawTarget,
+    geometry::{Dimensions, Point, Size},
+    pixelcolor::BinaryColor,
     Pixel,
 };
 
@@ -56,6 +56,16 @@ pub enum DisplayRotation {
 impl Default for DisplayRotation {
     fn default() -> Self {
         DisplayRotation::Rotate0
+    }
+}
+
+// Sh1107g に Dimensions トレイトを実装
+impl<I2C> Dimensions for Sh1107g<I2C> {
+    fn bounding_box(&self) -> embedded_graphics_core::primitives::Rectangle {
+        embedded_graphics_core::primitives::Rectangle::new(
+            Point::new(0, 0),
+            Size::new(DISPLAY_WIDTH, DISPLAY_HEIGHT),
+        )
     }
 }
 
@@ -225,8 +235,17 @@ where
             // `buffer` は2048バイト全体で、各ページ128バイトなので
             // buffer[page * 128 .. (page + 1) * 128] で該当ページのスライスを取得
 
+            // page も usize にキャストして演算
+            let page_usize = page as usize; // <-- ここでusizeにキャスト
+            let width_usize = DISPLAY_WIDTH as usize; // <-- ここもusizeにキャスト
+
+            // インデックス計算をusizeで行う
+            let start_index = page_usize * (width_usize / 8);
+            let end_index = (page_usize + 1) * (width_usize / 8);
+
+            // スライスもusizeの範囲で指定
             // 内部バッファ保持
-            let page_data = &self.buffer[(page * (DISPLAY_WIDTH / 8) as usize)..((page + 1) * (DISPLAY_WIDTH / 8) as usize)];
+            let page_data = &self.buffer[start_index..end_index];
 
             // I2Cのwriteは1回の呼び出しで送信できるデータ量に制限がある場合があるため、
             // 16バイトずつ分割して送信するロジックは理にかなっている。
@@ -289,9 +308,9 @@ where
     }
 
     /// ディスプレイのサイズを返す
-    fn size(&self) -> Size {
-        Size::new(DISPLAY_WIDTH, DISPLAY_HEIGHT)
-    }
+    // fn size(&self) -> Size {
+    //     Size::new(DISPLAY_WIDTH, DISPLAY_HEIGHT)
+    // }
 
     /// ディスプレイを特定の色でクリアする
     fn clear(&mut self, color: Self::Color) -> Result<(), Self::Error> {
