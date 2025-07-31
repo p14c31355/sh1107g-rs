@@ -1,3 +1,6 @@
+pub mod common;
+pub mod commands;
+
 #[cfg(feature = "sync")]
 pub mod sync;
 
@@ -13,6 +16,8 @@ use embedded_graphics_core::{
     Pixel,
 };
 
+pub use common::{Sh1107gBuilder, BuilderError};
+
 /// SH1107G I2C OLED driver
 
 // define display size
@@ -20,18 +25,17 @@ const DISPLAY_WIDTH: u32 = 128;
 const DISPLAY_HEIGHT: u32 = 128;
 const BUFFER_SIZE: usize = (DISPLAY_WIDTH * DISPLAY_HEIGHT / 8) as usize;
 
+#[cfg(feature = "sync")]
+use embedded_hal::i2c::I2c;
+
+#[cfg(feature = "async")]
+use embedded_hal_async::i2c::I2c;
+
 pub struct Sh1107g<I2C> {
     i2c: I2C,
     address: u8,
     buffer: [u8; BUFFER_SIZE], // Internal buffer
     // Configure in builder to Sh1107g struct
-}
-
-// Builder struct
-pub struct Sh1107gBuilder<I2C> {
-    i2c: Option<I2C>,
-    address: u8,      // Configure default address or choice Option type
-    // If you can add more settings value rotation: DisplayRotation,etc...
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -86,53 +90,6 @@ impl<I2C> Sh1107gBuilder<I2C> {
 
     // If you need other method, add other setting method, example: size,rotate,etc...
 }
-
-// BuilderからbuildされたSh1107gインスタンスがinitとflushを呼ぶように変更
-#[cfg(feature = "sync")]
-impl<I2C, E> Sh1107gBuilder<I2C>
-where
-    I2C: embedded_hal::i2c::I2c<Error = E>,
-{
-    /// 設定に基づきSh1107gインスタンスを構築する。
-    pub fn build(self) -> Result<Sh1107g<I2C>, BuilderError> {
-        let i2c = self.i2c.ok_or(BuilderError::NoI2cConnected)?;
-        // let size = self.size.ok_or(BuilderError::NoDisplaySizeDefined)?; // サイズが必須の場合
-
-        // サイズや回転を設定するオプションを追加した場合、Sh1107g構造体にもそれらのフィールドを追加し、
-        // ここで渡す必要があります。
-
-        let oled = Sh1107g::new(i2c, self.address
-            // size: size,
-            // rotation: self.rotation,
-            ); // Sh1107g::newは内部バッファを初期化する
-
-        // ディスプレイの初期化を自動的に行っても良いし、build() はインスタンスの作成のみに責任を持ち、
-        // init() は別途呼び出すようにしても良い。今回はシンプルにインスタンス作成まで。
-        Ok(oled)
-    }
-}
-
-#[cfg(feature = "async")]
-impl<I2C, E> Sh1107gBuilder<I2C>
-where
-    I2C: embedded_hal_async::i2c::I2c<Error = E>,
-{
-    pub fn build(self) -> Result<Sh1107g<I2C>, BuilderError> {
-        let i2c = self.i2c.ok_or(BuilderError::NoI2cConnected)?;
-        let oled = Sh1107g::new(i2c, self.address);
-        Ok(oled)
-    }
-}
-
-// Define error enum in builder
-#[derive(Debug)]
-pub enum BuilderError {
-    NoI2cConnected,
-    // NoDisplaySizeDefined, // サイズが必須の場合
-}
-// embedded-halのErrorトレイトにも対応させる必要があるかもしれません
-// impl embedded_hal::i2c::Error for BuilderError { ... }
-// impl From<BuilderError> for YourDriverError { ... } など
 
 // Sh1107g impl block
 impl<I2C, E> Sh1107g<I2C>
@@ -251,8 +208,6 @@ where
         self.buffer.iter_mut().for_each(|b| *b = 0x00);
     }
 }
-
-// sh1107g-driver/src/lib.rs (Sh1107gのimplブロックの続き、または新しいimplブロック)
 
 impl<I2C, E> DrawTarget for Sh1107g<I2C>
 where
