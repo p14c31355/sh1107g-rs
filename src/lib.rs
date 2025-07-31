@@ -1,8 +1,8 @@
 #[cfg(feature = "sync")]
-use embedded_hal::i2c::I2c;
+pub mod sync;
 
 #[cfg(feature = "async")]
-use embedded_hal_async::i2c::I2c; // async版のI2cトレイト
+pub mod async_;
 
 use heapless::Vec;
 
@@ -13,41 +13,25 @@ use embedded_graphics_core::{
     Pixel,
 };
 
-/// SH1107G I2C OLEDドライバ
-// sh1107g-driver/src/lib.rs
+/// SH1107G I2C OLED driver
 
-// ディスプレイの幅と高さの定数を定義
+// define display size
 const DISPLAY_WIDTH: u32 = 128;
 const DISPLAY_HEIGHT: u32 = 128;
-// バッファサイズ (幅 * 高さ / 8ピクセル/バイト)
 const BUFFER_SIZE: usize = (DISPLAY_WIDTH * DISPLAY_HEIGHT / 8) as usize;
 
-// 既存のSh1107g構造体はそのまま残す
 pub struct Sh1107g<I2C> {
     i2c: I2C,
     address: u8,
-    buffer: [u8; BUFFER_SIZE], // 内部バッファ
-    // 必要に応じて、DisplayRotationやDisplaySizeなどの設定をここに保持する
-    // 今回はBuilderで設定し、最終的なSh1107gに渡す形にするため、直接は持たせない
+    buffer: [u8; BUFFER_SIZE], // Internal buffer
+    // Configure in builder to Sh1107g struct
 }
 
-// Builder構造体
+// Builder struct
 pub struct Sh1107gBuilder<I2C> {
-    i2c: Option<I2C>, // I2CインスタンスはOptionで、後から設定される
-    address: u8,      // デフォルトアドレスを設定しておくか、Optionにする
-    // ここに、初期化に必要な他の設定値（例: サイズ、回転など）を追加
-    // size: Option<DisplaySize>, // DisplaySize構造体が定義されていれば
-    // rotation: DisplayRotation, // デフォルト値を持たせるかOptionにする
-}
-
-// （仮）DisplaySizeとDisplayRotationの定義
-// これらはembedded-graphicsクレートから提供されることが多いですが、
-// まずは仮で定義しておきます。
-// 後でembedded-graphicsを導入するときに置き換えます。
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct DisplaySize {
-    pub width: u16,
-    pub height: u16,
+    i2c: Option<I2C>,
+    address: u8,      // Configure default address or choice Option type
+    // If you can add more settings value rotation: DisplayRotation,etc...
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -57,7 +41,8 @@ pub enum DisplayRotation {
     Rotate180,
     Rotate270,
 }
-// デフォルト値
+
+// Default process
 impl Default for DisplayRotation {
     fn default() -> Self {
         DisplayRotation::Rotate0
@@ -74,49 +59,35 @@ impl<I2C> Dimensions for Sh1107g<I2C> {
     }
 }
 
-// Sh1107gBuilder の impl ブロック
+// Sh1107gBuilder implement block
 impl<I2C> Sh1107gBuilder<I2C> {
-    /// 新しいBuilderインスタンスを作成する。
-    /// デフォルトのI2Cアドレスを指定する。
+    /// Make new builder instance
+    /// Designation default I2C address
     pub fn new() -> Self {
         Self {
             i2c: None,
-            address: 0x3C, // デフォルトI2Cアドレス (0x3Cは一般的)
+            address: 0x3C, // default
             // size: None,
             // rotation: DisplayRotation::default(),
         }
     }
 
-    /// I2Cインターフェースを接続する。
+    /// Connect I2C
     pub fn connect_i2c(mut self, i2c: I2C) -> Self {
         self.i2c = Some(i2c);
         self
     }
 
-    /// I2Cアドレスを設定する。
+    /// Configure I2C address
     pub fn with_address(mut self, address: u8) -> Self {
         self.address = address;
         self
     }
 
-    // 必要に応じて他の設定メソッドを追加
-    // 例えば、ディスプレイサイズを設定するメソッド
-    // pub fn with_size(mut self, size: DisplaySize) -> Self {
-    //     self.size = Some(size);
-    //     self
-    // }
-
-    // ディスプレイの回転を設定するメソッド
-    // pub fn with_rotation(mut self, rotation: DisplayRotation) -> Self {
-    //     self.rotation = rotation;
-    //     self
-    // }
+    // If you need other method, add other setting method, example: size,rotate,etc...
 }
 
-// Sh1107gBuilder の impl ブロック内 (続き)
-
 // BuilderからbuildされたSh1107gインスタンスがinitとflushを呼ぶように変更
-// build() メソッド内で、Sh1107g::new を呼び出す
 #[cfg(feature = "sync")]
 impl<I2C, E> Sh1107gBuilder<I2C>
 where
@@ -135,9 +106,8 @@ where
             // rotation: self.rotation,
             ); // Sh1107g::newは内部バッファを初期化する
 
-        // ここでディスプレイの初期化を自動的に行っても良いし、
-        // build() はインスタンスの作成のみに責任を持ち、init() は別途呼び出すようにしても良い。
-        // 今回はシンプルにインスタンス作成まで。
+        // ディスプレイの初期化を自動的に行っても良いし、build() はインスタンスの作成のみに責任を持ち、
+        // init() は別途呼び出すようにしても良い。今回はシンプルにインスタンス作成まで。
         Ok(oled)
     }
 }
@@ -154,7 +124,7 @@ where
     }
 }
 
-// Builderパターンで発生しうるエラーを定義
+// Define error enum in builder
 #[derive(Debug)]
 pub enum BuilderError {
     NoI2cConnected,
@@ -164,14 +134,13 @@ pub enum BuilderError {
 // impl embedded_hal::i2c::Error for BuilderError { ... }
 // impl From<BuilderError> for YourDriverError { ... } など
 
-// Sh1107g の impl ブロック
+// Sh1107g impl block
 impl<I2C, E> Sh1107g<I2C>
 where
     I2C: I2c<Error = E>,
 {
-    /// 新しいドライバインスタンスを作成
-    // Sh1107gBuilder から呼び出される新しいnew関数 (またはinit関数)
-    // Builderから構築される際に、内部バッファを初期化
+    // Make new driver instance & Degine function called by the builder
+    // Initialise the internal buffer when called by builder
     pub fn new(i2c: I2C, address: u8) -> Self {
         Self {
             i2c,
@@ -180,7 +149,7 @@ where
         }
     }
 
-    /// ディスプレイの初期化シーケンスを実行
+    /// Init display
     pub fn init(&mut self) -> Result<(), E> {
         // PythonドライバとSH1107データシートから導出されたコマンド列
         let cmds: &[u8] = &[
@@ -195,7 +164,7 @@ where
             0xD5, 0x50, // Clock divide (クロック分周比と発振周波数)
             0xD9, 0x22, // Precharge (プリチャージ期間設定)
             0xDB, 0x35, // VCOM Deselect (VCOMHデセレクトレベル設定)
-            0xAD, 0x8A, // Charge pump on (チャージポンプ有効化)
+            0xAD, 0x8A, // Charge pump on
             0xAF,       // Display ON
         ];
         // コマンドを2バイトずつ（コマンドバイト + データバイト）送信
@@ -238,9 +207,8 @@ where
         self.i2c.write(self.address, &[0x00, cmd, arg])
     }
 
-    /// 画面描画（バッファデータをディスプレイに書き込む）
-    // draw() メソッドを flush() に名前変更（DrawTargetの命名規則に合わせる）
-    // bufferを外部から受け取るのではなく、自身の内部バッファを送信するように変更
+    /// Rendering
+    // Send self internal buffer
     pub fn flush(&mut self) -> Result<(), E> {
         // SH1107Gはページアドレッシングモードで、各ページ128バイト
         // 128x128ピクセルなので、128/8 = 16ページ
@@ -293,9 +261,8 @@ where
     Sh1107g<I2C>: Sized, // Self::Error が E であることを保証するため
     E: embedded_hal_async::i2c::Error + embedded_hal::i2c::Error, // 両方のエラー型に対応
 {
-    // DrawTargetが描画できる色空間を定義 (白黒OLEDなのでBinaryColor)
+    // DrawTarget define color dimension (monochro OLED = BinaryColor)
     type Color = BinaryColor;
-    // DrawTarget実装で発生しうるエラー型 (I2Cのエラー型を使用)
     type Error = E; // embedded-halのI2Cエラーをそのまま使う
 
     /// ピクセルを描画する主要なメソッド
@@ -328,12 +295,7 @@ where
         Ok(())
     }
 
-    /// ディスプレイのサイズを返す
-    // fn size(&self) -> Size {
-    //     Size::new(DISPLAY_WIDTH, DISPLAY_HEIGHT)
-    // }
-
-    /// ディスプレイを特定の色でクリアする
+    /// Fill in with color
     fn clear(&mut self, color: Self::Color) -> Result<(), Self::Error> {
         let fill_byte = match color {
             BinaryColor::On => 0xFF,
