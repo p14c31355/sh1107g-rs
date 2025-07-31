@@ -1,5 +1,5 @@
 pub mod common;
-pub mod commands;
+pub mod cmds;
 
 #[cfg(feature = "sync")]
 pub mod sync;
@@ -16,27 +16,18 @@ use embedded_graphics_core::{
     Pixel,
 };
 
-pub use common::{Sh1107gBuilder, BuilderError};
+use crate::common::{DISPLAY_HEIGHT, DISPLAY_WIDTH, BUFFER_SIZE};
+pub use common::{Sh1107g, Sh1107gBuilder, BuilderError};
+use crate::cmds::*;
 
 /// SH1107G I2C OLED driver
 
-// define display size
-const DISPLAY_WIDTH: u32 = 128;
-const DISPLAY_HEIGHT: u32 = 128;
-const BUFFER_SIZE: usize = (DISPLAY_WIDTH * DISPLAY_HEIGHT / 8) as usize;
 
 #[cfg(feature = "sync")]
 use embedded_hal::i2c::I2c;
 
 #[cfg(feature = "async")]
 use embedded_hal_async::i2c::I2c;
-
-pub struct Sh1107g<I2C> {
-    i2c: I2C,
-    address: u8,
-    buffer: [u8; BUFFER_SIZE], // Internal buffer
-    // Configure in builder to Sh1107g struct
-}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum DisplayRotation {
@@ -108,31 +99,6 @@ where
 
     /// Init display
     pub fn init(&mut self) -> Result<(), E> {
-        // PythonドライバとSH1107データシートから導出されたコマンド列
-        let cmds: &[u8] = &[
-            0xAE,       // Display OFF
-            0xDC, 0x00, // Display start line = 0 (リセット後のデフォルト値)
-            0x81, 0x2F, // Contrast control (コントラスト設定)
-            0x20,       // Memory mode (Page addressing)
-            0xA0,       // Segment remap (一般的な設定)
-            0xC0,       // COM output scan dir (COMスキャン方向、通常はC0hかC8h)
-            0xA8, 0x7F, // Multiplex ratio = 127 (128行の表示に対応)
-            0xD3, 0x60, // Display offset = 0x60 (96ピクセルオフセット、128x128で重要)
-            0xD5, 0x50, // Clock divide (クロック分周比と発振周波数)
-            0xD9, 0x22, // Precharge (プリチャージ期間設定)
-            0xDB, 0x35, // VCOM Deselect (VCOMHデセレクトレベル設定)
-            0xAD, 0x8A, // Charge pump on
-            0xAF,       // Display ON
-        ];
-        // コマンドを2バイトずつ（コマンドバイト + データバイト）送信
-        // ただし、0xAE, 0x20, 0xA0, 0xC0, 0xAF は単独コマンド
-        // そのため、cmds.chunks(2) の処理は注意が必要。
-        // 個々のコマンドをsend_commandで送信するのがより確実。
-        // 例: self.send_command(&[0xAE])?; self.send_command(&[0xDC, 0x00])?; ...
-        // 提供されたコードの for chunk in cmds.chunks(2) は、コマンドとデータが常にペアであるという前提なので、
-        // 実際のSH1107コマンド構造に合わせて変更が必要。
-        // 例：send_command_single と send_command_with_arg に分けるなど
-
         // 正確な初期化シーケンスの例 (上記のPythonドライバのロジックとデータシートに基づき再構成)
         self.send_command_single(0xAE)?; // Display Off
         self.send_command_with_arg(0xD5, 0x51)?; // Set Display Clock Divide Ratio / Osc Frequency (Pythonで0x51)

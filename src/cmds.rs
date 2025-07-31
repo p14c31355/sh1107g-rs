@@ -1,0 +1,27 @@
+pub const CMDS: &[u8] = &[
+  0xAE,       // Display OFF
+  0xDC, 0x00, // Display start line = 0 (リセット後のデフォルト値)
+  0x81, 0x2F, // Contrast control (コントラスト設定)
+  0x20,       // Memory mode (Page addressing)
+  0xA0,       // Segment remap (一般的な設定)
+  0xC0,       // COM output scan dir (COMスキャン方向、通常はC0hかC8h)
+  0xA8, 0x7F, // Multiplex ratio = 127 (128行の表示に対応)
+  0xD3, 0x60, // Display offset = 0x60 (96ピクセルオフセット、128x128で重要)
+  0xD5, 0x50, // Clock divide (クロック分周比と発振周波数)
+  0xD9, 0x22, // Precharge (プリチャージ期間設定)
+  0xDB, 0x35, // VCOM Deselect (VCOMHデセレクトレベル設定)
+  0xAD, 0x8A, // Charge pump on
+  0xAF,       // Display ON
+];
+
+/* 
+  PythonドライバとSH1107データシートから導出されたコマンド列
+  コマンドを2バイトずつ（コマンドバイト + データバイト）送信
+  ただし、0xAE, 0x20, 0xA0, 0xC0, 0xAF は単独コマンド
+  そのため、cmds.chunks(2) の処理は注意が必要。
+  個々のコマンドをsend_commandで送信するのがより確実。
+  例: self.send_command(&[0xAE])?; self.send_command(&[0xDC, 0x00])?; ...
+  提供されたコードの for chunk in cmds.chunks(2) は、コマンドとデータが常にペアであるという前提なので、
+  実際のSH1107コマンド構造に合わせて変更が必要。
+  例：send_command_single と send_command_with_arg に分けるなど
+*/

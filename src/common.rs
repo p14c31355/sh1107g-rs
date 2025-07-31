@@ -14,3 +14,15 @@ pub enum BuilderError {
 // embedded-halのErrorトレイトにも対応させる必要があるかもしれません
 // impl embedded_hal::i2c::Error for BuilderError { ... }
 // impl From<BuilderError> for YourDriverError { ... } など
+
+// define display size
+const DISPLAY_WIDTH: u32 = 128;
+const DISPLAY_HEIGHT: u32 = 128;
+const BUFFER_SIZE: usize = (DISPLAY_WIDTH * DISPLAY_HEIGHT / 8) as usize;
+
+pub struct Sh1107g<I2C> {
+    i2c: I2C,
+    address: u8,
+    buffer: [u8; BUFFER_SIZE], // Internal buffer
+    // Configure in builder to Sh1107g struct
+}

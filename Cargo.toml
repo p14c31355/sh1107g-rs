@@ -26,4 +26,6 @@ sync = ["embedded-hal"]
 # async = ["embedded-hal-async"]
 
 std = []
+
+# memo: dep 記法のほうがいんじゃね
 embedded-hal-async = ["dep:embedded-hal-async"]
