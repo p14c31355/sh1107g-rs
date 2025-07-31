@@ -1,13 +1,27 @@
 use embedded_hal::i2c::I2c;
 use heapless::Vec;
 
+use embedded_graphics_core::{
+    draw_target::{DrawTarget, self},
+    geometry::{Point, Size},
+    pixelcolor::{BinaryColor, PixelColor},
+    Pixel,
+};
+
 /// SH1107G I2C OLEDドライバ
 // sh1107g-driver/src/lib.rs
+
+// ディスプレイの幅と高さの定数を定義
+const DISPLAY_WIDTH: u32 = 128;
+const DISPLAY_HEIGHT: u32 = 128;
+// バッファサイズ (幅 * 高さ / 8ピクセル/バイト)
+const BUFFER_SIZE: usize = (DISPLAY_WIDTH * DISPLAY_HEIGHT / 8) as usize;
 
 // 既存のSh1107g構造体はそのまま残す
 pub struct Sh1107g<I2C> {
     i2c: I2C,
     address: u8,
+    buffer: [u8; BUFFER_SIZE], // 内部バッファ
     // 必要に応じて、DisplayRotationやDisplaySizeなどの設定をここに保持する
     // 今回はBuilderで設定し、最終的なSh1107gに渡す形にするため、直接は持たせない
 }
@@ -86,6 +100,8 @@ impl<I2C> Sh1107gBuilder<I2C> {
 
 // Sh1107gBuilder の impl ブロック内 (続き)
 
+// BuilderからbuildされたSh1107gインスタンスがinitとflushを呼ぶように変更
+// build() メソッド内で、Sh1107g::new を呼び出す
 impl<I2C, E> Sh1107gBuilder<I2C>
 where
     I2C: embedded_hal::i2c::I2c<Error = E>,
@@ -95,12 +111,13 @@ where
         let i2c = self.i2c.ok_or(BuilderError::NoI2cConnected)?;
         // let size = self.size.ok_or(BuilderError::NoDisplaySizeDefined)?; // サイズが必須の場合
 
-        let mut oled = Sh1107g {
-            i2c,
-            address: self.address,
+        // サイズや回転を設定するオプションを追加した場合、Sh1107g構造体にもそれらのフィールドを追加し、
+        // ここで渡す必要があります。
+
+        let oled = Sh1107g::new(i2c, self.address
             // size: size,
             // rotation: self.rotation,
-        };
+            ); // Sh1107g::newは内部バッファを初期化する
 
         // ここでディスプレイの初期化を自動的に行っても良いし、
         // build() はインスタンスの作成のみに責任を持ち、init() は別途呼び出すようにしても良い。
@@ -122,11 +139,17 @@ pub enum BuilderError {
 // Sh1107g の impl ブロック
 impl<I2C, E> Sh1107g<I2C>
 where
-    I2C: embedded_hal::i2c::I2c<Error = E>,
+    I2C: I2c<Error = E>,
 {
     /// 新しいドライバインスタンスを作成
-    fn new(i2c: I2C, address: u8) -> Self {
-        Self { i2c, address }
+    // Sh1107gBuilder から呼び出される新しいnew関数 (またはinit関数)
+    // Builderから構築される際に、内部バッファを初期化
+    pub fn new(i2c: I2C, address: u8) -> Self {
+        Self {
+            i2c,
+            address,
+            buffer: [0x00; BUFFER_SIZE], // 全てオフで初期化
+        }
     }
 
     /// ディスプレイの初期化シーケンスを実行
@@ -188,7 +211,9 @@ where
     }
 
     /// 画面描画（バッファデータをディスプレイに書き込む）
-    pub fn draw(&mut self, buffer: &[u8]) -> Result<(), E> {
+    // draw() メソッドを flush() に名前変更（DrawTargetの命名規則に合わせる）
+    // bufferを外部から受け取るのではなく、自身の内部バッファを送信するように変更
+    pub fn flush(&mut self) -> Result<(), E> {
         // SH1107Gはページアドレッシングモードで、各ページ128バイト
         // 128x128ピクセルなので、128/8 = 16ページ
         for page in 0..16 { // 0から15ページまで
@@ -199,10 +224,13 @@ where
             // 各ページ128バイトのデータを送信
             // `buffer` は2048バイト全体で、各ページ128バイトなので
             // buffer[page * 128 .. (page + 1) * 128] で該当ページのスライスを取得
-            let page_data = &buffer[(page * 128)..((page + 1) * 128)];
+
+            // 内部バッファ保持
+            let page_data = &self.buffer[(page * (DISPLAY_WIDTH / 8) as usize)..((page + 1) * (DISPLAY_WIDTH / 8) as usize)];
 
             // I2Cのwriteは1回の呼び出しで送信できるデータ量に制限がある場合があるため、
             // 16バイトずつ分割して送信するロジックは理にかなっている。
+            // 各ページのデータを16バイトチャンクで送信
             for chunk in page_data.chunks(16) {
                 let mut buf: Vec<u8, 17> = Vec::new(); // 制御バイト1 + データ最大16バイト
                 buf.push(0x40).unwrap(); // control byte for data (0x40)
@@ -210,6 +238,68 @@ where
                 self.i2c.write(self.address, &buf)?;
             }
         }
+        Ok(())
+    }
+
+    /// 内部バッファをクリアする
+    pub fn clear_buffer(&mut self) {
+        self.buffer.iter_mut().for_each(|b| *b = 0x00);
+    }
+}
+
+// sh1107g-driver/src/lib.rs (Sh1107gのimplブロックの続き、または新しいimplブロック)
+
+impl<I2C, E> DrawTarget for Sh1107g<I2C>
+where
+    I2C: embedded_hal::i2c::I2c<Error = E>,
+{
+    // DrawTargetが描画できる色空間を定義 (白黒OLEDなのでBinaryColor)
+    type Color = BinaryColor;
+    // DrawTarget実装で発生しうるエラー型 (I2Cのエラー型を使用)
+    type Error = E; // embedded-halのI2Cエラーをそのまま使う
+
+    /// ピクセルを描画する主要なメソッド
+    fn draw_iter<PIXELS>(&mut self, pixels: PIXELS) -> Result<(), Self::Error>
+    where
+        PIXELS: IntoIterator<Item = Pixel<Self::Color>>,
+    {
+        for Pixel(Point { x, y }, color) in pixels {
+            // 座標がディスプレイ範囲内かチェック
+            if x < 0 || x >= DISPLAY_WIDTH as i32 || y < 0 || y >= DISPLAY_HEIGHT as i32 {
+                continue; // 範囲外のピクセルはスキップ
+            }
+
+            // ピクセル座標からバッファのインデックスとビットマスクを計算
+            // SH1107Gはページアドレッシングモードで、各バイトが縦8ピクセル
+            let byte_index = (x as usize) + (y as usize / 8) * (DISPLAY_WIDTH as usize);
+            let bit_mask = 1 << (y % 8); // バイト内のビット位置
+
+            // バッファの範囲チェック（念のため）
+            if byte_index >= BUFFER_SIZE {
+                continue; // バッファ範囲外もスキップ
+            }
+
+            // 色に応じてバッファのビットをセットまたはクリア
+            match color {
+                BinaryColor::On => self.buffer[byte_index] |= bit_mask,  // ピクセルをON (セット)
+                BinaryColor::Off => self.buffer[byte_index] &= !bit_mask, // ピクセルをOFF (クリア)
+            }
+        }
+        Ok(())
+    }
+
+    /// ディスプレイのサイズを返す
+    fn size(&self) -> Size {
+        Size::new(DISPLAY_WIDTH, DISPLAY_HEIGHT)
+    }
+
+    /// ディスプレイを特定の色でクリアする
+    fn clear(&mut self, color: Self::Color) -> Result<(), Self::Error> {
+        let fill_byte = match color {
+            BinaryColor::On => 0xFF,
+            BinaryColor::Off => 0x00,
+        };
+        self.buffer.iter_mut().for_each(|b| *b = fill_byte);
         Ok(())
     }
 }
