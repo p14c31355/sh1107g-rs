@@ -15,9 +15,8 @@ readme = "README.md"
 embedded-hal = "1.0.0"
 heapless = "0.8.0"
 display-interface = "0.5.0"
-embedded-graphics = { version = "0.8.1", optional = true } # optional = true で、使う人が必要に応じてfeatureを有効化できるようにする
+embedded-graphics = { version = "0.8.1", default-features = false }
+embedded-graphics-core = "0.4.0"
 
 [features]
 default = []
-std = []
-graphics = ["embedded-graphics"]
