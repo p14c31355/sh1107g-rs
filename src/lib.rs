@@ -1,4 +1,9 @@
+#[cfg(feature = "sync")]
 use embedded_hal::i2c::I2c;
+
+#[cfg(feature = "async")]
+use embedded_hal_async::i2c::I2c; // async版のI2cトレイト
+
 use heapless::Vec;
 
 use embedded_graphics_core::{
@@ -112,6 +117,7 @@ impl<I2C> Sh1107gBuilder<I2C> {
 
 // BuilderからbuildされたSh1107gインスタンスがinitとflushを呼ぶように変更
 // build() メソッド内で、Sh1107g::new を呼び出す
+#[cfg(feature = "sync")]
 impl<I2C, E> Sh1107gBuilder<I2C>
 where
     I2C: embedded_hal::i2c::I2c<Error = E>,
@@ -132,6 +138,18 @@ where
         // ここでディスプレイの初期化を自動的に行っても良いし、
         // build() はインスタンスの作成のみに責任を持ち、init() は別途呼び出すようにしても良い。
         // 今回はシンプルにインスタンス作成まで。
+        Ok(oled)
+    }
+}
+
+#[cfg(feature = "async")]
+impl<I2C, E> Sh1107gBuilder<I2C>
+where
+    I2C: embedded_hal_async::i2c::I2c<Error = E>,
+{
+    pub fn build(self) -> Result<Sh1107g<I2C>, BuilderError> {
+        let i2c = self.i2c.ok_or(BuilderError::NoI2cConnected)?;
+        let oled = Sh1107g::new(i2c, self.address);
         Ok(oled)
     }
 }
@@ -270,7 +288,10 @@ where
 
 impl<I2C, E> DrawTarget for Sh1107g<I2C>
 where
-    I2C: embedded_hal::i2c::I2c<Error = E>,
+    // I2Cトレイト境界は、DrawTarget自身はI2cトレイトを必要としないため、ここで指定する必要はない
+    // むしろ、Sh1107gがI2CとEに依存していることを示すだけでよい
+    Sh1107g<I2C>: Sized, // Self::Error が E であることを保証するため
+    E: embedded_hal_async::i2c::Error + embedded_hal::i2c::Error, // 両方のエラー型に対応
 {
     // DrawTargetが描画できる色空間を定義 (白黒OLEDなのでBinaryColor)
     type Color = BinaryColor;
