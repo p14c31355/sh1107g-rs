@@ -1,3 +1,4 @@
+/// SH1107G I2C OLED driver
 pub mod common;
 pub mod cmds;
 
@@ -14,10 +15,7 @@ use crate::common::{DISPLAY_HEIGHT, DISPLAY_WIDTH, BUFFER_SIZE};
 use crate::common::{Sh1107g, Sh1107gBuilder, BuilderError};
 use crate::cmds::*;
 
-/// SH1107G I2C OLED driver
-
-
-
+/*
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum DisplayRotation {
     Rotate0,
@@ -32,3 +30,4 @@ impl Default for DisplayRotation {
         DisplayRotation::Rotate0
     }
 }
+*/
