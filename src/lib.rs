@@ -1,9 +1,5 @@
 /// SH1107G I2C OLED driver
-pub mod common;
 pub mod cmds;
-
-#[cfg(feature = "sync")]
-pub mod sync;
 
 #[cfg(feature = "async")]
 pub mod async_;
@@ -161,7 +157,6 @@ where
 use embedded_hal::i2c::I2c;
 
 // Sh1107g instance ( builded by builder ) call init and flush
-#[cfg(feature = "sync")]
 impl<I2C, E> Sh1107gBuilder<I2C>
 where
     I2C: embedded_hal::i2c::I2c<Error = E>,
@@ -202,22 +197,22 @@ where
     /// Init display
     pub fn init(&mut self) -> Result<(), E> {
         // 正確な初期化シーケンスの例 (上記のPythonドライバのロジックとデータシートに基づき再構成)
-        self.send_command_single(0xAE)?; // Display Off
+        self.send_command_single(DISPLAY_OFF)?; // Display Off
         self.send_command_with_arg(0xD5, 0x51)?; // Set Display Clock Divide Ratio / Osc Frequency (Pythonで0x51)
         self.send_command_with_arg(0xA8, 0x7F)?; // Set Multiplex Ratio (128行対応)
-        self.send_command_with_arg(0xD3, 0x60)?; // Set Display Offset (Pythonで0x60)
-        self.send_command_with_arg(0xAD, 0x8B)?; // Set Charge Pump (Pythonで0x8B, データシートでは8BhがEnable)
+        self.send_command_with_arg(DISPLAY_OFFSET_CMD, DISPLAY_OFFSET_DATA)?; // Set Display Offset (Pythonで0x60)
+        self.send_command_with_arg(CHARGE_PUMP_ON_CMD, CHARGE_PUMP_ON_DATA)?; // Set Charge Pump (Pythonで0x8B, データシートでは8BhがEnable)
         self.send_command_with_arg(0xDA, 0x12)?; // Set COM Pins Hardware Config (Pythonで0x12)
-        self.send_command_single(0x20)?; // Set Memory Addressing Mode (Page Addressing Mode)
-        self.send_command_single(0x81)?; // Set Contrast Control
-        self.send_command_with_arg(0x81, 0x2F)?; // Contrast Control (0x2Fは一般的な値)
+        self.send_command_single(PAGE_ADDRESSING_CMD)?; // Set Memory Addressing Mode (Page Addressing Mode)
+        self.send_command_single(CONTRAST_CONTROL_CMD)?; // Set Contrast Control
+        self.send_command_with_arg(CONTRAST_CONTROL_CMD, CONTRAST_CONTROL_DATA)?; // Contrast Control (0x2Fは一般的な値)
         self.send_command_single(0xA0)?; // Set Segment Remap (通常はA0hかA1h)
         self.send_command_single(0xC0)?; // Set COM Output Scan Direction (C0h: Normal, C8h: Re-mapped)
         self.send_command_with_arg(0xD9, 0x22)?; // Set Pre-charge Period
         self.send_command_with_arg(0xDB, 0x35)?; // Set VCOM Deselect Level
         self.send_command_single(0xA4)?; // Set Entire Display ON / OFF (A4h: Normal Display)
         self.send_command_single(0xA6)?; // Set Normal / Inverse Display (A6h: Normal)
-        self.send_command_single(0xAF)?; // Display ON
+        self.send_command_single(DISPLAY_ON)?; // Display ON
 
         Ok(())
     }
@@ -235,9 +230,9 @@ where
     /// Rendering
     // Send self internal buffer
     pub fn flush(&mut self) -> Result<(), E> {
-        // SH1107Gはページアドレッシングモードで、各ページ128バイト
-        // 128x128ピクセルなので、128/8 = 16ページ
-        for page in 0..16 { // 0から15ページまで
+        // SH1107G is page addressing mode and 128 byte/page
+        // 128/8 = 16 page because 128x128 pixels
+        for page in 0..16 { // 0 to 15
             self.send_command_single(0xB0 + page)?; // Set Page Address (B0h ~ BFh)
             self.send_command_single(0x00)?; // Set Lower Column Address (0x00)
             self.send_command_single(0x10)?; // Set Higher Column Address (0x10)

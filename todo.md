@@ -1,5 +1,3 @@
-crates.io にアクセスし、GitHubアカウントでログインします。
-
 Account Settings ページから新しいAPIトークンを生成します。
 cargo login <APIトークン>
 （一度設定すれば、同じPCでは再度設定する必要はありません）
@@ -32,10 +30,6 @@ cargo publish コマンドは、クレートをビルドし、必要なメタデ
 数分から数十分で crates.io と docs.rs にあなたのクレートが表示
 
 refactoring
-
-src/common.rs を作成し、Sh1107gBuilder の共通の実装
-
-src/sync.rs を作成し、同期版の Sh1107g メソッド（init, flush, send_command_single, send_command_with_arg）の impl ブロックを移動。
 
 src/async.rs を作成し、非同期版の Sh1107g メソッドの impl ブロックを移動 (async fn と await を追加)。
 
