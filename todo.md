@@ -1,13 +1,6 @@
-Account Settings ページから新しいAPIトークンを生成します。
-cargo login <APIトークン>
-（一度設定すれば、同じPCでは再度設定する必要はありません）
-
 4. 公開前の最終確認
-テスト:
-
-ドキュメント生成:
-
-cargo doc --open
+・実機テスト
+・cargo doc --open
 
 README.md の充実:
 
@@ -15,17 +8,13 @@ README.md の充実:
 
 バッジ（crates.ioのバージョン、docs.rsのビルドステータスなど）を追加すると見栄えが良くなります。
 
-
 cargo clippy --workspace --all-targets --all-features
 
 5. クレートの公開
-sh1107g-driver ディレクトリに移動し、以下のコマンドを実行します。
-
 cd sh1107g-driver
-cargo publish --allow-dirty # もしgitの変更がコミットされていない場合
+cargo publish 
+--allow-dirty # もしgitの変更がコミットされていない場合
 cargo publish コマンドは、クレートをビルドし、必要なメタデータ（Cargo.toml の情報）とソースコードを crates.io にアップロードします。
-
---allow-dirty は、ローカルのGitリポジトリにコミットされていない変更がある場合でも公開を許可するオプションです。通常はクリーンな状態で公開することが推奨されます。
 
 数分から数十分で crates.io と docs.rs にあなたのクレートが表示
 
