@@ -23,8 +23,7 @@ where
             // rotation: self.rotation,
             ); // Sh1107g::new init include buffer
 
-        // ディスプレイの初期化を自動的に行っても良いし、build() はインスタンスの作成のみに責任を持ち、
-        // init() は別途呼び出すようにしても良い。今回はシンプルにインスタンス作成まで。
+        // display initialize やるかどうか
         Ok(oled)
     }
 }
@@ -35,9 +34,8 @@ impl<I2C, E> Sh1107g<I2C>
 where
     I2C: I2c<Error = E>,
 {
-    /// Init display
+    /// Display initialize sequence
     pub fn init(&mut self) -> Result<(), E> {
-        // 正確な初期化シーケンスの例 (上記のPythonドライバのロジックとデータシートに基づき再構成)
         self.send_cmd(DISPLAY_OFF)?; // Display Off
         self.send_cmdandarg(0xD5, 0x51)?; // Set Display Clock Divide Ratio / Osc Frequency (Pythonで0x51)
         self.send_cmdandarg(SET_MULTIPLEX_RATIO, MULTIPLEX_RATIO_DATA)?; // Set Multiplex Ratio (128行対応)
@@ -58,12 +56,12 @@ where
         Ok(())
     }
 
-    /// 単一コマンドを送信
+    /// IIC write command byte
     fn send_cmd(&mut self, cmd: u8) -> Result<(), E> {
         self.i2c.write(self.address, &[0x00, cmd])
     }
 
-    /// コマンドと引数を送信
+    /// IIC write command byte and data byte
     fn send_cmdandarg(&mut self, cmd: u8, arg: u8) -> Result<(), E> {
         self.i2c.write(self.address, &[0x00, cmd, arg])
     }
@@ -78,15 +76,13 @@ where
             self.send_cmd(0x00)?; // Set Lower Column Address (0x00)
             self.send_cmd(0x10)?; // Set Higher Column Address (0x10)
 
-            // 各ページ128バイトのデータを送信
             // `buffer` は2048バイト全体で、各ページ128バイトなので
             // buffer[page * 128 .. (page + 1) * 128] で該当ページのスライスを取得
 
-            // page も usize にキャストして演算
-            let page_usize = page as usize; // <-- ここでusizeにキャスト
-            let width_usize = DISPLAY_WIDTH as usize; // <-- ここもusizeにキャスト
+            // Cast to usize and perform calculation
+            let page_usize = page as usize;
+            let width_usize = DISPLAY_WIDTH as usize;
 
-            // インデックス計算をusizeで行う
             let start_index = page_usize * (width_usize / 8);
             let end_index = (page_usize + 1) * (width_usize / 8);
 
