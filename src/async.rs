@@ -13,7 +13,7 @@ where
     I2C: embedded_hal_async::i2c::I2c<Error = E>,
 {
     pub async fn build(self) -> Result<Sh1107g<I2C>, BuilderError> {
-        let i2c = self.i2c.ok_or(BuilderError::NoI2cConnected).await?;
+        let i2c = self.i2c.ok_or(BuilderError::NoI2cConnected)?;
         let oled = Sh1107g::new(i2c, self.address);
         Ok(oled)
     }

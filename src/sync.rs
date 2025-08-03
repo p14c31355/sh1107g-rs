@@ -1,6 +1,8 @@
 /// sync
+#[cfg(feature = "sync")]
 use embedded_hal::i2c::I2c;
 
+#[cfg(feature = "sync")]
 pub struct Sh1107g<I2C> {
     i2c: I2C,
     address: u8,
@@ -10,6 +12,7 @@ pub struct Sh1107g<I2C> {
 
 
 // Sh1107g instance ( builded by builder ) call init and flush
+#[cfg(feature = "sync")]
 impl<I2C, E> Sh1107gBuilder<I2C>
 where
     I2C: embedded_hal::i2c::I2c<Error = E>,
@@ -33,6 +36,7 @@ where
 }
 
 // Sh1107g impl block
+#[cfg(feature = "sync")]
 impl<I2C, E> Sh1107g<I2C>
 where
     I2C: I2c<Error = E>,
@@ -125,6 +129,7 @@ where
     }
 }
 
+#[cfg(feature = "sync")]
 impl<I2C, E> DrawTarget for Sh1107g<I2C>
 where
     // I2Cトレイト境界は、DrawTarget自身はI2cトレイトを必要としないため、ここで指定する必要はない

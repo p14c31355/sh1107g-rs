@@ -1,6 +1,9 @@
 /// SH1107G I2C OLED driver
 pub mod cmds;
 
+#[cfg(feature = "sync")]
+pub mod sync;
+
 #[cfg(feature = "async")]
 pub mod async_;
 
@@ -32,6 +35,13 @@ use embedded_graphics_core::{
     pixelcolor::BinaryColor,
     Pixel,
 };
+
+pub struct Sh1107g<I2C> {
+    i2c: I2C,
+    address: u8,
+    buffer: [u8; BUFFER_SIZE], // Internal buffer
+    // Configure in builder to Sh1107g struct
+}
 
 // Builder struct
 pub struct Sh1107gBuilder<I2C> {
