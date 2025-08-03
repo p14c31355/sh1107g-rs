@@ -1,4 +1,3 @@
-
 /// sync
 #[cfg(feature = "sync")]
 use embedded_hal::i2c::I2c;
@@ -39,33 +38,33 @@ where
     /// Init display
     pub fn init(&mut self) -> Result<(), E> {
         // 正確な初期化シーケンスの例 (上記のPythonドライバのロジックとデータシートに基づき再構成)
-        self.send_command_single(DISPLAY_OFF)?; // Display Off
-        self.send_command_with_arg(0xD5, 0x51)?; // Set Display Clock Divide Ratio / Osc Frequency (Pythonで0x51)
-        self.send_command_with_arg(SET_MULTIPLEX_RATIO, MULTIPLEX_RATIO_DATA)?; // Set Multiplex Ratio (128行対応)
-        self.send_command_with_arg(DISPLAY_OFFSET_CMD, DISPLAY_OFFSET_DATA)?; // Set Display Offset (Pythonで0x60)
-        self.send_command_with_arg(CHARGE_PUMP_ON_CMD, CHARGE_PUMP_ON_DATA)?; // Set Charge Pump (Pythonで0x8B, データシートでは8BhがEnable)
-        self.send_command_with_arg(0xDA, 0x12)?; // Set COM Pins Hardware Config (Pythonで0x12)
-        self.send_command_single(PAGE_ADDRESSING_CMD)?; // Set Memory Addressing Mode (Page Addressing Mode)
-        self.send_command_single(CONTRAST_CONTROL_CMD)?; // Set Contrast Control
-        self.send_command_with_arg(CONTRAST_CONTROL_CMD, CONTRAST_CONTROL_DATA)?; // Contrast Control (0x2Fは一般的な値)
-        self.send_command_single(0xA0)?; // Set Segment Remap (通常はA0hかA1h)
-        self.send_command_single(0xC0)?; // Set COM Output Scan Direction (C0h: Normal, C8h: Re-mapped)
-        self.send_command_with_arg(0xD9, 0x22)?; // Set Pre-charge Period
-        self.send_command_with_arg(0xDB, 0x35)?; // Set VCOM Deselect Level
-        self.send_command_single(0xA4)?; // Set Entire Display ON / OFF (A4h: Normal Display)
-        self.send_command_single(0xA6)?; // Set Normal / Inverse Display (A6h: Normal)
-        self.send_command_single(DISPLAY_ON)?; // Display ON
+        self.send_cmd(DISPLAY_OFF)?; // Display Off
+        self.send_cmdandarg(0xD5, 0x51)?; // Set Display Clock Divide Ratio / Osc Frequency (Pythonで0x51)
+        self.send_cmdandarg(SET_MULTIPLEX_RATIO, MULTIPLEX_RATIO_DATA)?; // Set Multiplex Ratio (128行対応)
+        self.send_cmdandarg(DISPLAY_OFFSET_CMD, DISPLAY_OFFSET_DATA)?; // Set Display Offset (Pythonで0x60)
+        self.send_cmdandarg(CHARGE_PUMP_ON_CMD, CHARGE_PUMP_ON_DATA)?; // Set Charge Pump (Pythonで0x8B, データシートでは8BhがEnable)
+        self.send_cmdandarg(0xDA, 0x12)?; // Set COM Pins Hardware Config (Pythonで0x12)
+        self.send_cmd(PAGE_ADDRESSING_CMD)?; // Set Memory Addressing Mode (Page Addressing Mode)
+        self.send_cmd(CONTRAST_CONTROL_CMD)?; // Set Contrast Control
+        self.send_cmdandarg(CONTRAST_CONTROL_CMD, CONTRAST_CONTROL_DATA)?; // Contrast Control (0x2Fは一般的な値)
+        self.send_cmd(0xA0)?; // Set Segment Remap (通常はA0hかA1h)
+        self.send_cmd(0xC0)?; // Set COM Output Scan Direction (C0h: Normal, C8h: Re-mapped)
+        self.send_cmdandarg(0xD9, 0x22)?; // Set Pre-charge Period
+        self.send_cmdandarg(0xDB, 0x35)?; // Set VCOM Deselect Level
+        self.send_cmd(0xA4)?; // Set Entire Display ON / OFF (A4h: Normal Display)
+        self.send_cmd(0xA6)?; // Set Normal / Inverse Display (A6h: Normal)
+        self.send_cmd(DISPLAY_ON)?; // Display ON
 
         Ok(())
     }
 
     /// 単一コマンドを送信
-    fn send_command_single(&mut self, cmd: u8) -> Result<(), E> {
+    fn send_cmd(&mut self, cmd: u8) -> Result<(), E> {
         self.i2c.write(self.address, &[0x00, cmd])
     }
 
     /// コマンドと引数を送信
-    fn send_command_with_arg(&mut self, cmd: u8, arg: u8) -> Result<(), E> {
+    fn send_cmdandarg(&mut self, cmd: u8, arg: u8) -> Result<(), E> {
         self.i2c.write(self.address, &[0x00, cmd, arg])
     }
 
@@ -75,9 +74,9 @@ where
         // SH1107G is page addressing mode and 128 byte/page
         // 128/8 = 16 page because 128x128 pixels
         for page in 0..16 { // 0 to 15
-            self.send_command_single(0xB0 + page)?; // Set Page Address (B0h ~ BFh)
-            self.send_command_single(0x00)?; // Set Lower Column Address (0x00)
-            self.send_command_single(0x10)?; // Set Higher Column Address (0x10)
+            self.send_cmd(0xB0 + page)?; // Set Page Address (B0h ~ BFh)
+            self.send_cmd(0x00)?; // Set Lower Column Address (0x00)
+            self.send_cmd(0x10)?; // Set Higher Column Address (0x10)
 
             // 各ページ128バイトのデータを送信
             // `buffer` は2048バイト全体で、各ページ128バイトなので
