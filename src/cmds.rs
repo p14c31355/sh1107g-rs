@@ -27,3 +27,8 @@ pub const VCOM_DESELECT_CMD: u8 = 0xDB;
 pub const VCOM_DESELECT_DATA: u8 = 0x35;
 pub const CLOCK_DIVIDE_CMD: u8 = 0xD5;
 pub const CLOCK_DIVIDE_DATA: u8 = 0x51;
+
+pub const SET_COM_PINS_CMD: u8 = 0xDA;
+pub const SET_COM_PINS_DATA: u8 = 0x12;
+pub const SET_ENTIRE_DISPLAY_ON_OFF_CMD: u8 = 0xA4;
+pub const SET_NORMAL_INVERSE_DISPLAY_CMD: u8 = 0xA6;

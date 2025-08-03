@@ -48,14 +48,14 @@ where
         self.send_cmdandarg(DISPLAY_OFFSET_CMD, DISPLAY_OFFSET_DATA)?; // Set Display Offset (Pythonで0x60)
         self.send_cmdandarg(CHARGE_PUMP_ON_CMD, CHARGE_PUMP_ON_DATA)?; // Set Charge Pump (Pythonで0x8B, データシートでは8BhがEnable)
         self.send_cmdandarg(PAGE_ADDRESSING_CMD, 0x02)?; // Set Memory Addressing Mode (Page Addressing Mode)
-        self.send_cmdandarg(0xDA, 0x12)?; // Set COM Pins Hardware Config (Pythonで0x12)
+        self.send_cmdandarg(SET_COM_PINS_CMD, SET_COM_PINS_DATA)?; // Set COM Pins Hardware Config (Pythonで0x12)
         self.send_cmdandarg(CONTRAST_CONTROL_CMD, CONTRAST_CONTROL_DATA)?; // Contrast Control (0x2Fは一般的な値)
         self.send_cmdandarg(PRECHARGE_CMD, PRECHARGE_DATA)?; // Set Pre-charge Period
         self.send_cmd(SEGMENT_REMAP)?; // Set Segment Remap (通常はA0hかA1h)
         self.send_cmd(COM_OUTPUT_SCAN_DIR)?; // Set COM Output Scan Direction (C0h: Normal, C8h: Re-mapped)
         self.send_cmdandarg(VCOM_DESELECT_CMD, VCOM_DESELECT_DATA)?; // Set VCOM Deselect Level
-        self.send_cmd(0xA4)?; // Set Entire Display ON / OFF (A4h: Normal Display)
-        self.send_cmd(0xA6)?; // Set Normal / Inverse Display (A6h: Normal)
+        self.send_cmd(SET_ENTIRE_DISPLAY_ON_OFF_CMD)?; // Set Entire Display ON / OFF (A4h: Normal Display)
+        self.send_cmd(SET_NORMAL_INVERSE_DISPLAY_CMD)?; // Set Normal / Inverse Display (A6h: Normal)
         self.send_cmd(DISPLAY_ON)?; // Display ON
 
         Ok(())
@@ -88,8 +88,8 @@ where
             let page_usize = page as usize;
             let width_usize = DISPLAY_WIDTH as usize;
 
-            let start_index = page_usize * (width_usize / 8);
-            let end_index = (page_usize + 1) * (width_usize / 8);
+            let start_index = page_usize * width_usize;
+            let end_index = (page_usize + 1) * width_usize;
 
             // スライスもusizeの範囲で指定
             // 内部バッファ保持
