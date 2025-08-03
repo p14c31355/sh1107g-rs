@@ -42,7 +42,7 @@ where
     /// Display initialize sequence
     pub fn init(&mut self) -> Result<(), E> {
         self.send_cmd(DISPLAY_OFF)?; // Display Off
-        self.send_cmdandarg(0xD5, 0x51)?; // Set Display Clock Divide Ratio / Osc Frequency (Pythonで0x51)
+        self.send_cmdandarg(CLOCK_DIVIDE_CMD, CLOCK_DIVIDE_DATA)?; // Set Display Clock Divide Ratio / Osc Frequency (Pythonで0x51)
         self.send_cmdandarg(SET_MULTIPLEX_RATIO, MULTIPLEX_RATIO_DATA)?; // Set Multiplex Ratio (128行対応)
         self.send_cmdandarg(DISPLAY_OFFSET_CMD, DISPLAY_OFFSET_DATA)?; // Set Display Offset (Pythonで0x60)
         self.send_cmdandarg(CHARGE_PUMP_ON_CMD, CHARGE_PUMP_ON_DATA)?; // Set Charge Pump (Pythonで0x8B, データシートでは8BhがEnable)
@@ -50,10 +50,10 @@ where
         self.send_cmd(PAGE_ADDRESSING_CMD)?; // Set Memory Addressing Mode (Page Addressing Mode)
         self.send_cmd(CONTRAST_CONTROL_CMD)?; // Set Contrast Control
         self.send_cmdandarg(CONTRAST_CONTROL_CMD, CONTRAST_CONTROL_DATA)?; // Contrast Control (0x2Fは一般的な値)
-        self.send_cmd(0xA0)?; // Set Segment Remap (通常はA0hかA1h)
-        self.send_cmd(0xC0)?; // Set COM Output Scan Direction (C0h: Normal, C8h: Re-mapped)
-        self.send_cmdandarg(0xD9, 0x22)?; // Set Pre-charge Period
-        self.send_cmdandarg(0xDB, 0x35)?; // Set VCOM Deselect Level
+        self.send_cmd(SEGMENT_REMAP)?; // Set Segment Remap (通常はA0hかA1h)
+        self.send_cmd(COM_OUTPUT_SCAN_DIR)?; // Set COM Output Scan Direction (C0h: Normal, C8h: Re-mapped)
+        self.send_cmdandarg(PRECHARGE_CMD, PRECHARGE_DATA)?; // Set Pre-charge Period
+        self.send_cmdandarg(VCOM_DESELECT_CMD, VCOM_DESELECT_DATA)?; // Set VCOM Deselect Level
         self.send_cmd(0xA4)?; // Set Entire Display ON / OFF (A4h: Normal Display)
         self.send_cmd(0xA6)?; // Set Normal / Inverse Display (A6h: Normal)
         self.send_cmd(DISPLAY_ON)?; // Display ON
