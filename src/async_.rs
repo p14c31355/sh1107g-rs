@@ -1,18 +1,7 @@
-#[cfg(feature = "async")]
-use std::convert::Infallible;
+#[cfg(feature = "async_")]
+use crate::{cmds::*, BuilderError, Sh1107g, Sh1107gBuilder, DISPLAY_WIDTH};
 
-#[cfg(feature = "async")]
-use embedded_graphics_core::{
-    draw_target::DrawTarget,
-    pixelcolor::BinaryColor,
-    Pixel,
-    geometry::Point,
-};
-
-#[cfg(feature = "async")]
-use crate::{cmds::*, BuilderError, Sh1107g, Sh1107gBuilder, DISPLAY_WIDTH, DISPLAY_HEIGHT, BUFFER_SIZE};
-
-#[cfg(feature = "async")]
+#[cfg(feature = "async_")]
 impl<I2C, E> Sh1107gBuilder<I2C>
 where
     I2C: embedded_hal_async::i2c::I2c<Error = E>,
@@ -24,54 +13,54 @@ where
     }
 }
 
-#[cfg(feature = "async")]
+#[cfg(feature = "async_")]
 // Sh1107g impl block
 impl<I2C, E> Sh1107g<I2C>
 where
     I2C: embedded_hal_async::i2c::I2c<Error = E>,
 {
     /// Init display
-    pub async fn init(&mut self) -> Result<(), E> {
+    pub async fn init_async(&mut self) -> Result<(), E> {
         // 正確な初期化シーケンスの例 (上記のPythonドライバのロジックとデータシートに基づき再構成)
-        self.send_command_single(0xAE).await?; // Display Off
-        self.send_command_with_arg(0xD5, 0x51).await?; // Set Display Clock Divide Ratio / Osc Frequency (Pythonで0x51)
-        self.send_command_with_arg(0xA8, 0x7F).await?; // Set Multiplex Ratio (128行対応)
-        self.send_command_with_arg(0xD3, 0x60).await?; // Set Display Offset (Pythonで0x60)
-        self.send_command_with_arg(0xAD, 0x8B).await?; // Set Charge Pump (Pythonで0x8B, データシートでは8BhがEnable)
-        self.send_command_with_arg(0xDA, 0x12).await?; // Set COM Pins Hardware Config (Pythonで0x12)
-        self.send_command_single(0x20).await?; // Set Memory Addressing Mode (Page Addressing Mode)
-        self.send_command_single(0x81).await?; // Set Contrast Control
-        self.send_command_with_arg(0x81, 0x2F).await?; // Contrast Control (0x2Fは一般的な値)
-        self.send_command_single(0xA0).await?; // Set Segment Remap (通常はA0hかA1h)
-        self.send_command_single(0xC0).await?; // Set COM Output Scan Direction (C0h: Normal, C8h: Re-mapped)
-        self.send_command_with_arg(0xD9, 0x22).await?; // Set Pre-charge Period
-        self.send_command_with_arg(0xDB, 0x35).await?; // Set VCOM Deselect Level
-        self.send_command_single(0xA4).await?; // Set Entire Display ON / OFF (A4h: Normal Display)
-        self.send_command_single(0xA6).await?; // Set Normal / Inverse Display (A6h: Normal)
-        self.send_command_single(0xAF).await?; // Display ON
+        self.send_cmd_async(DISPLAY_OFF).await?; // Display Off
+        self.send_cmdandarg_async(CLOCK_DIVIDE_CMD, CLOCK_DIVIDE_DATA).await?; // Set Display Clock Divide Ratio / Osc Frequency (Pythonで0x51)
+        self.send_cmdandarg_async(SET_MULTIPLEX_RATIO, MULTIPLEX_RATIO_DATA).await?; // Set Multiplex Ratio (128行対応)
+        self.send_cmdandarg_async(DISPLAY_OFFSET_CMD, DISPLAY_OFFSET_DATA).await?; // Set Display Offset (Pythonで0x60)
+        self.send_cmdandarg_async(CHARGE_PUMP_ON_CMD, CHARGE_PUMP_ON_DATA).await?; // Set Charge Pump (Pythonで0x8B, データシートでは8BhがEnable)
+        self.send_cmdandarg_async(0xDA, 0x12).await?; // Set COM Pins Hardware Config (Pythonで0x12)
+        self.send_cmd_async(PAGE_ADDRESSING_CMD).await?; // Set Memory Addressing Mode (Page Addressing Mode)
+        self.send_cmd_async(CONTRAST_CONTROL_CMD).await?; // Set Contrast Control
+        self.send_cmdandarg_async(CONTRAST_CONTROL_CMD, CONTRAST_CONTROL_DATA).await?; // Contrast Control (0x2Fは一般的な値)
+        self.send_cmd_async(SEGMENT_REMAP).await?; // Set Segment Remap (通常はA0hかA1h)
+        self.send_cmd_async(COM_OUTPUT_SCAN_DIR).await?; // Set COM Output Scan Direction (C0h: Normal, C8h: Re-mapped)
+        self.send_cmdandarg_async(PRECHARGE_CMD, PRECHARGE_DATA).await?; // Set Pre-charge Period
+        self.send_cmdandarg_async(VCOM_DESELECT_CMD, VCOM_DESELECT_DATA).await?; // Set VCOM Deselect Level
+        self.send_cmd_async(0xA4).await?; // Set Entire Display ON / OFF (A4h: Normal Display)
+        self.send_cmd_async(0xA6).await?; // Set Normal / Inverse Display (A6h: Normal)
+        self.send_cmd_async(DISPLAY_ON).await?; // Display ON
 
         Ok(())
     }
 
     /// 単一コマンドを送信
-    async fn send_command_single(&mut self, cmd: u8) -> Result<(), E> {
+    async fn send_cmd_async(&mut self, cmd: u8) -> Result<(), E> {
         self.i2c.write(self.address, &[0x00, cmd]).await
     }
 
     /// コマンドと引数を送信
-    async fn send_command_with_arg(&mut self, cmd: u8, arg: u8) -> Result<(), E> {
+    async fn send_cmdandarg_async(&mut self, cmd: u8, arg: u8) -> Result<(), E> {
         self.i2c.write(self.address, &[0x00, cmd, arg]).await
     }
 
     /// Rendering
     // Send self internal buffer
-    pub async fn flush(&mut self) -> Result<(), E> {
+    pub async fn flush_async(&mut self) -> Result<(), E> {
         // SH1107Gはページアドレッシングモードで、各ページ128バイト
         // 128x128ピクセルなので、128/8 = 16ページ
         for page in 0..16 { // 0から15ページまで
-            self.send_command_single(0xB0 + page).await?; // Set Page Address (B0h ~ BFh)
-            self.send_command_single(0x00).await?; // Set Lower Column Address (0x00)
-            self.send_command_single(0x10).await?; // Set Higher Column Address (0x10)
+            self.send_cmd_async(0xB0 + page).await?; // Set Page Address (B0h ~ BFh)
+            self.send_cmd_async(0x00).await?; // Set Lower Column Address (0x00)
+            self.send_cmd_async(0x10).await?; // Set Higher Column Address (0x10)
 
             // 各ページ128バイトのデータを送信
             // `buffer` は2048バイト全体で、各ページ128バイトなので
@@ -99,53 +88,6 @@ where
                 self.i2c.write(self.address, &buf).await?;
             }
         }
-        Ok(())
-    }
-}
-
-#[cfg(feature = "async")]
-impl<I2C> DrawTarget for Sh1107g<I2C> {
-    // DrawTarget define color dimension (monochro OLED = BinaryColor)
-    type Color = BinaryColor;
-    type Error = Infallible; // embedded-halのI2Cエラーをそのまま使う
-    
-    /// ピクセルを描画する主要なメソッド
-    fn draw_iter<PIXELS>(&mut self, pixels: PIXELS) -> Result<(), Self::Error>
-    where
-        PIXELS: IntoIterator<Item = Pixel<Self::Color>>,
-    {
-        for Pixel(Point { x, y }, color) in pixels {
-            // 座標がディスプレイ範囲内かチェック
-            if x < 0 || x >= DISPLAY_WIDTH as i32 || y < 0 || y >= DISPLAY_HEIGHT as i32 {
-                continue; // 範囲外のピクセルはスキップ
-            }
-
-            // ピクセル座標からバッファのインデックスとビットマスクを計算
-            // SH1107Gはページアドレッシングモードで、各バイトが縦8ピクセル
-            let byte_index = (x as usize) + (y as usize / 8) * (DISPLAY_WIDTH as usize);
-            let bit_mask = 1 << (y % 8); // バイト内のビット位置
-
-            // バッファの範囲チェック（念のため）
-            if byte_index >= BUFFER_SIZE {
-                continue; // バッファ範囲外もスキップ
-            }
-
-            // 色に応じてバッファのビットをセットまたはクリア
-            match color {
-                BinaryColor::On => self.buffer[byte_index] |= bit_mask,  // ピクセルをON (セット)
-                BinaryColor::Off => self.buffer[byte_index] &= !bit_mask, // ピクセルをOFF (クリア)
-            }
-        }
-        Ok(())
-    }
-
-    /// Fill in with color
-    fn clear(&mut self, color: Self::Color) -> Result<(), Self::Error> {
-        let fill_byte = match color {
-            BinaryColor::On => 0xFF,
-            BinaryColor::Off => 0x00,
-        };
-        self.buffer.iter_mut().for_each(|b| *b = fill_byte);
         Ok(())
     }
 }

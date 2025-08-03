@@ -1,20 +1,10 @@
-#[cfg(feature = "sync")]
-use std::convert::Infallible;
 
 /// sync
 #[cfg(feature = "sync")]
 use embedded_hal::i2c::I2c;
 
 #[cfg(feature = "sync")]
-use embedded_graphics_core::{
-    draw_target::DrawTarget,
-    pixelcolor::BinaryColor,
-    Pixel,
-    geometry::Point,
-};
-
-#[cfg(feature = "sync")]
-use crate::{cmds::*, BuilderError, Sh1107g, Sh1107gBuilder, DISPLAY_WIDTH, DISPLAY_HEIGHT, BUFFER_SIZE};
+use crate::{cmds::*, BuilderError, Sh1107g, Sh1107gBuilder, DISPLAY_WIDTH};
 
 // Sh1107g instance ( builded by builder ) call init and flush
 #[cfg(feature = "sync")]
@@ -115,53 +105,6 @@ where
                 self.i2c.write(self.address, &buf)?;
             }
         }
-        Ok(())
-    }
-}
-
-#[cfg(feature = "sync")]
-impl<I2C> DrawTarget for Sh1107g<I2C> {
-    // DrawTarget define color dimension (monochro OLED = BinaryColor)
-    type Color = BinaryColor;
-    type Error = Infallible; // embedded-halのI2Cエラーをそのまま使う
-
-    /// ピクセルを描画する主要なメソッド
-    fn draw_iter<PIXELS>(&mut self, pixels: PIXELS) -> Result<(), Self::Error>
-    where
-        PIXELS: IntoIterator<Item = Pixel<Self::Color>>,
-    {
-        for Pixel(Point { x, y }, color) in pixels {
-            // 座標がディスプレイ範囲内かチェック
-            if x < 0 || x >= DISPLAY_WIDTH as i32 || y < 0 || y >= DISPLAY_HEIGHT as i32 {
-                continue; // 範囲外のピクセルはスキップ
-            }
-
-            // ピクセル座標からバッファのインデックスとビットマスクを計算
-            // SH1107Gはページアドレッシングモードで、各バイトが縦8ピクセル
-            let byte_index = (x as usize) + (y as usize / 8) * (DISPLAY_WIDTH as usize);
-            let bit_mask = 1 << (y % 8); // バイト内のビット位置
-
-            // バッファの範囲チェック（念のため）
-            if byte_index >= BUFFER_SIZE {
-                continue; // バッファ範囲外もスキップ
-            }
-
-            // 色に応じてバッファのビットをセットまたはクリア
-            match color {
-                BinaryColor::On => self.buffer[byte_index] |= bit_mask,  // ピクセルをON (セット)
-                BinaryColor::Off => self.buffer[byte_index] &= !bit_mask, // ピクセルをOFF (クリア)
-            }
-        }
-        Ok(())
-    }
-
-    /// Fill in with color
-    fn clear(&mut self, color: Self::Color) -> Result<(), Self::Error> {
-        let fill_byte = match color {
-            BinaryColor::On => 0xFF,
-            BinaryColor::Off => 0x00,
-        };
-        self.buffer.iter_mut().for_each(|b| *b = fill_byte);
         Ok(())
     }
 }

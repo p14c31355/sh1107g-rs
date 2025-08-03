@@ -4,10 +4,6 @@
   ただし、0xAE, 0x20, 0xA0, 0xC0, 0xAF は単独コマンド
   そのため、cmds.chunks(2) の処理は注意が必要。
   個々のコマンドをsend_commandで送信するのがより確実。
-  例: self.send_command(&[0xAE])?; self.send_command(&[0xDC, 0x00])?; ...
-  提供されたコードの for chunk in cmds.chunks(2) は、コマンドとデータが常にペアであるという前提なので、
-  実際のSH1107コマンド構造に合わせて変更が必要。
-  例：send_command_single と send_command_with_arg に分けるなど
 */
 
 pub const DISPLAY_OFF: u8 = 0xAE;
@@ -15,7 +11,7 @@ pub const DISPLAY_ON: u8 = 0xAF;
 pub const SET_MULTIPLEX_RATIO: u8 = 0xA8;
 pub const MULTIPLEX_RATIO_DATA: u8 = 0x7F;
 pub const CHARGE_PUMP_ON_CMD: u8 = 0xAD;
-pub const CHARGE_PUMP_ON_DATA: u8 = 0x8A;
+pub const CHARGE_PUMP_ON_DATA: u8 = 0x8B;
 pub const PAGE_ADDRESSING_CMD: u8 = 0x20;
 pub const SEGMENT_REMAP: u8 = 0xA0;
 pub const COM_OUTPUT_SCAN_DIR: u8 = 0xC0;
@@ -30,4 +26,4 @@ pub const PRECHARGE_DATA: u8 = 0x22;
 pub const VCOM_DESELECT_CMD: u8 = 0xDB;
 pub const VCOM_DESELECT_DATA: u8 = 0x35;
 pub const CLOCK_DIVIDE_CMD: u8 = 0xD5;
-pub const CLOCK_DIVIDE_DATA: u8 = 0x50;
+pub const CLOCK_DIVIDE_DATA: u8 = 0x51;
