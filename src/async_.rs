@@ -2,6 +2,11 @@
 use crate::{cmds::*, BuilderError, Sh1107g, Sh1107gBuilder, DISPLAY_WIDTH};
 
 #[cfg(feature = "async_")]
+use core::result::Result;
+#[cfg(feature = "async_")]
+use core::result::Result::Ok;
+
+#[cfg(feature = "async_")]
 impl<I2C, E> Sh1107gBuilder<I2C>
 where
     I2C: embedded_hal_async::i2c::I2c<Error = E>,

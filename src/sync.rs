@@ -5,6 +5,11 @@ use embedded_hal::i2c::I2c;
 #[cfg(feature = "sync")]
 use crate::{cmds::*, BuilderError, Sh1107g, Sh1107gBuilder, DISPLAY_WIDTH};
 
+#[cfg(feature = "sync")]
+use core::result::Result;
+#[cfg(feature = "sync")]
+use core::result::Result::Ok;
+
 // Sh1107g instance ( builded by builder ) call init and flush
 #[cfg(feature = "sync")]
 impl<I2C, E> Sh1107gBuilder<I2C>

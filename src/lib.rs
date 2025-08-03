@@ -1,3 +1,4 @@
+#![no_std]
 /// SH1107G I2C OLED driver
 pub mod cmds;
 
@@ -13,6 +14,11 @@ use embedded_graphics_core::{
     Pixel,
 };
 use core::convert::Infallible;
+use core::result::Result;
+use core::option::Option::{self, Some, None};
+use core::result::Result::Ok;
+use core::fmt::Debug;
+use core::iter::IntoIterator;
 
 /*
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
