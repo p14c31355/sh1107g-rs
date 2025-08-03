@@ -7,10 +7,6 @@ pub mod sync;
 #[cfg(feature = "async")]
 pub mod async_;
 
-use heapless::Vec;
-
-use crate::cmds::*;
-
 /*
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum DisplayRotation {
@@ -29,12 +25,7 @@ impl Default for DisplayRotation {
 */
 
 /// common
-use embedded_graphics_core::{
-    draw_target::DrawTarget,
-    geometry::{Dimensions, Point, Size},
-    pixelcolor::BinaryColor,
-    Pixel,
-};
+use embedded_graphics_core::geometry::{Dimensions, Point, Size};
 
 pub struct Sh1107g<I2C> {
     pub(crate) i2c: I2C,
@@ -43,6 +34,22 @@ pub struct Sh1107g<I2C> {
     // Configure in builder to Sh1107g struct
 }
 
+impl <I2C> Sh1107g<I2C> {
+    // Make new driver instance & Degine function called by the builder
+    // Initialise the internal buffer when called by builder
+    pub fn new(i2c: I2C, address: u8) -> Self {
+        Self {
+            i2c,
+            address,
+            buffer: [0x00; BUFFER_SIZE], // 全てオフで初期化
+        }
+    }
+
+    /// 内部バッファをクリアする
+    pub fn clear_buffer(&mut self) {
+        self.buffer.iter_mut().for_each(|b| *b = 0x00);
+    }
+}
 // Builder struct
 pub struct Sh1107gBuilder<I2C> {
     i2c: Option<I2C>,

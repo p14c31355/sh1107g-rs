@@ -2,6 +2,17 @@
 #[cfg(feature = "sync")]
 use embedded_hal::i2c::I2c;
 
+#[cfg(feature = "sync")]
+use embedded_graphics_core::{
+    draw_target::DrawTarget,
+    pixelcolor::BinaryColor,
+    Pixel,
+    geometry::Point,
+};
+
+#[cfg(feature = "sync")]
+use crate::{cmds::*, BuilderError, Sh1107g, Sh1107gBuilder, DISPLAY_WIDTH, DISPLAY_HEIGHT, BUFFER_SIZE};
+
 // Sh1107g instance ( builded by builder ) call init and flush
 #[cfg(feature = "sync")]
 impl<I2C, E> Sh1107gBuilder<I2C>
@@ -32,16 +43,6 @@ impl<I2C, E> Sh1107g<I2C>
 where
     I2C: I2c<Error = E>,
 {
-    // Make new driver instance & Degine function called by the builder
-    // Initialise the internal buffer when called by builder
-    pub fn new(i2c: I2C, address: u8) -> Self {
-        Self {
-            i2c,
-            address,
-            buffer: [0x00; BUFFER_SIZE], // 全てオフで初期化
-        }
-    }
-
     /// Init display
     pub fn init(&mut self) -> Result<(), E> {
         // 正確な初期化シーケンスの例 (上記のPythonドライバのロジックとデータシートに基づき再構成)
@@ -105,18 +106,13 @@ where
             // 16バイトずつ分割して送信するロジックは理にかなっている。
             // 各ページのデータを16バイトチャンクで送信
             for chunk in page_data.chunks(16) {
-                let mut buf: Vec<u8, 17> = Vec::new(); // 制御バイト1 + データ最大16バイト
+                let mut buf: heapless::Vec<u8, 17> = heapless::Vec::new(); // 制御バイト1 + データ最大16バイト
                 buf.push(0x40).unwrap(); // control byte for data (0x40)
                 buf.extend_from_slice(chunk).unwrap();
                 self.i2c.write(self.address, &buf)?;
             }
         }
         Ok(())
-    }
-
-    /// 内部バッファをクリアする
-    pub fn clear_buffer(&mut self) {
-        self.buffer.iter_mut().for_each(|b| *b = 0x00);
     }
 }
 
