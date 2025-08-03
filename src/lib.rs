@@ -37,9 +37,9 @@ use embedded_graphics_core::{
 };
 
 pub struct Sh1107g<I2C> {
-    i2c: I2C,
-    address: u8,
-    buffer: [u8; BUFFER_SIZE], // Internal buffer
+    pub(crate) i2c: I2C,
+    pub(crate) address: u8,
+    pub(crate) buffer: [u8; BUFFER_SIZE], // Internal buffer
     // Configure in builder to Sh1107g struct
 }
 

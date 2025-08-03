@@ -1,12 +1,5 @@
 use embedded_hal_async::i2c::I2c; // async版のI2cトレイト
 
-pub struct Sh1107g<I2C> {
-    i2c: I2C,
-    address: u8,
-    buffer: [u8; BUFFER_SIZE], // Internal buffer
-    // Configure in builder to Sh1107g struct
-}
-
 #[cfg(feature = "async")]
 impl<I2C, E> Sh1107gBuilder<I2C>
 where

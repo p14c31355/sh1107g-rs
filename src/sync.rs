@@ -2,15 +2,6 @@
 #[cfg(feature = "sync")]
 use embedded_hal::i2c::I2c;
 
-#[cfg(feature = "sync")]
-pub struct Sh1107g<I2C> {
-    i2c: I2C,
-    address: u8,
-    buffer: [u8; BUFFER_SIZE], // Internal buffer
-    // Configure in builder to Sh1107g struct
-}
-
-
 // Sh1107g instance ( builded by builder ) call init and flush
 #[cfg(feature = "sync")]
 impl<I2C, E> Sh1107gBuilder<I2C>
