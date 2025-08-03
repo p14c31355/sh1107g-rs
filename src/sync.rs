@@ -1,3 +1,6 @@
+#[cfg(feature = "sync")]
+use std::convert::Infallible;
+
 /// sync
 #[cfg(feature = "sync")]
 use embedded_hal::i2c::I2c;
@@ -117,16 +120,10 @@ where
 }
 
 #[cfg(feature = "sync")]
-impl<I2C, E> DrawTarget for Sh1107g<I2C>
-where
-    // I2Cトレイト境界は、DrawTarget自身はI2cトレイトを必要としないため、ここで指定する必要はない
-    // むしろ、Sh1107gがI2CとEに依存していることを示すだけでよい
-    Sh1107g<I2C>: Sized, // Self::Error が E であることを保証するため
-    E: embedded_hal::i2c::Error, // 両方のエラー型に対応
-{
+impl<I2C> DrawTarget for Sh1107g<I2C> {
     // DrawTarget define color dimension (monochro OLED = BinaryColor)
     type Color = BinaryColor;
-    type Error = E; // embedded-halのI2Cエラーをそのまま使う
+    type Error = Infallible; // embedded-halのI2Cエラーをそのまま使う
 
     /// ピクセルを描画する主要なメソッド
     fn draw_iter<PIXELS>(&mut self, pixels: PIXELS) -> Result<(), Self::Error>
