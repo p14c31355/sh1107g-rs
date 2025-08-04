@@ -1,3 +1,4 @@
+// src/sync.rs
 /// sync
 #[cfg(feature = "sync")]
 use embedded_hal::i2c::I2c;
@@ -37,20 +38,13 @@ where
         let mut oled = Sh1107g::new(i2c, self.address);
         uwriteln!(serial, "DRIVER CREATED").ok();
 
-        match oled.init() {
-            Ok(_) => uwriteln!(serial, "INIT OK").ok(),
-            Err(_) => uwriteln!(serial, "INIT FAILED").ok(),
-        };
+        // init メソッドの戻り値の型が変更されたため、そのまま `?` を使用できる
+        oled.init()?;
 
+        uwriteln!(serial, "INIT OK").ok();
         Ok(oled)
     }
 }
-
-// let size = self.size.ok_or(BuilderError::NoDisplaySizeDefined)?; // サイズが必須の場合
-        // If you need, more add configure
-// size: size,
-            // rotation: self.rotation,// Sh1107g::new init include buffer
-            // display initialize やるかどうか
 
 // Sh1107g impl block
 #[cfg(feature = "sync")]
@@ -76,7 +70,7 @@ where
     }
 
     /// Init display (U8g2ライブラリ準拠)
-    pub fn init(&mut self) -> Result<(), E> {
+    pub fn init(&mut self) -> Result<(), Sh1107gError<E>> { // 戻り値の型を修正
         use heapless::Vec;
         let init_cmds: &[u8] = &[
             0xAE,           // Display Off
@@ -98,10 +92,10 @@ where
         ];
 
         let mut payload = Vec::<u8, 34>::new();
-        payload.push(0x00).map_err(|_| panic!("payload overflow"))?;
-        payload.extend_from_slice(init_cmds).map_err(|_| panic!("payload overflow"))?;
+        payload.push(0x00).map_err(|_| Sh1107gError::PayloadOverflow)?;
+        payload.extend_from_slice(init_cmds).map_err(|_| Sh1107gError::PayloadOverflow)?;
         self.i2c.write(self.address, &payload)
-        .map_err(|e| Sh1107gError::I2cError(e))?;
+            .map_err(Sh1107gError::I2cError)?; // `.map_err` を使用して `E` を `Sh1107gError<E>` に変換
 
 
         Ok(())
@@ -116,9 +110,12 @@ where
     let page_width = DISPLAY_WIDTH as usize;
 
     for page in 0..page_count {
-            self.send_cmd(0xB0 + page as u8)?;
-            self.send_cmd(0x00)?;
-            self.send_cmd(0x10)?;
+            self.send_cmd(0xB0 + page as u8)
+                .map_err(Sh1107gError::I2cError)?;
+            self.send_cmd(0x00)
+                .map_err(Sh1107gError::I2cError)?;
+            self.send_cmd(0x10)
+                .map_err(Sh1107gError::I2cError)?;
 
         let start_index = page * page_width;
         let end_index = start_index + page_width;
@@ -133,4 +130,4 @@ where
     }
         Ok(())
     }
-    }
+}
