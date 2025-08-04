@@ -23,7 +23,7 @@ where
 {
     pub fn build(
         mut self,
-        serial: &mut dyn core::fmt::Write, // ← ここが fmt::Write
+        serial: &mut dyn core::fmt::Write, // ← fmt::Write 経由でログ出力
     ) -> Result<Sh1107g<I2C>, BuilderError> {
         writeln!(serial, "BUILD START").ok();
 
@@ -34,13 +34,13 @@ where
         writeln!(serial, "DRIVER CREATED").ok();
 
         match oled.init() {
-        Ok(_) => writeln!(serial, "INIT OK").ok(),
-        Err(_) => writeln!(serial, "INIT FAILED").ok(),
-    };
+            Ok(_) => writeln!(serial, "INIT OK").ok(),
+            Err(_) => writeln!(serial, "INIT FAILED").ok(),
+        };
+
         Ok(oled)
     }
 }
-
 
 
 // let size = self.size.ok_or(BuilderError::NoDisplaySizeDefined)?; // サイズが必須の場合
@@ -53,12 +53,13 @@ where
 // sync.rs または async.rs
 
 // Sh1107g impl block
+#[cfg(feature = "sync")]
 impl<I2C, E> Sh1107g<I2C>
 where
-    I2C: embedded_hal::i2c::I2c<Error = E>,
+    I2C: embedded_hal::i2c::Write<Error = E>,
     E: core::fmt::Debug
-    + From<<heapless::Vec<u8, 64> as TryFrom<&'a [u8]>>::Error>
-    + From<heapless::i::CapacityError>,
+        + for<'a> From<<heapless::Vec<u8, 64> as TryFrom<&'a [u8]>>::Error>
+        + From<heapless::CapacityError>,
 
 {
     // コマンドを単独で送信するヘルパー関数
@@ -68,17 +69,15 @@ where
     }
 
     // 複数のコマンドをセットで送信するヘルパー関数
-    // データシートに従い、1つのI2Cトランザクションで送信
     fn send_cmds(&mut self, cmds: &[u8]) -> Result<(), E> {
         let mut payload = heapless::Vec::<u8, 20>::new();
-        payload.push(0x80).unwrap();
-        payload.extend_from_slice(cmds).unwrap();
+        payload.push(0x80).map_err(From::from)?;
+        payload.extend_from_slice(cmds).map_err(From::from)?;
         self.i2c.write(self.address, &payload)
     }
 
     /// Init display (U8g2ライブラリ準拠)
     pub fn init(&mut self) -> Result<(), E> {
-        // 全ての初期化コマンドを一つの配列にまとめる
         let init_cmds: &[u8] = &[
             0xAE,           // Display Off
             0x40,           // Display Start Line
@@ -97,9 +96,9 @@ where
             0xAD, 0x8B,     // Charge Pump
             0xAF,           // Display On
         ];
-        
+
         let mut payload = heapless::Vec::<u8, 34>::new();
-        payload.push(0x00).ok(); // 0x00: コマンドモードの制御バイト
+        payload.push(0x00).ok(); // コマンドモード
         payload.extend_from_slice(init_cmds).unwrap();
         self.i2c.write(self.address, &payload)?;
 
@@ -107,9 +106,6 @@ where
     }
 
     /// Rendering
-    // Send self internal buffer
-    // flush() 関数全体をこのコードに置き換えてください
-
     pub fn flush(&mut self) -> Result<(), E> {
         use crate::DISPLAY_HEIGHT;
 
@@ -117,18 +113,17 @@ where
         let page_width = crate::DISPLAY_WIDTH as usize;
 
         for page in 0..page_count {
-            self.send_cmd(0xB0 + page as u8)?;
-            self.send_cmd(0x00)?;
-            self.send_cmd(0x10)?;
+            self.send_cmd(0xB0 + page as u8)?; // ページアドレス
+            self.send_cmd(0x00)?;              // 下位カラム
+            self.send_cmd(0x10)?;              // 上位カラム
 
             let start_index = page * page_width;
             let end_index = start_index + page_width;
             let page_data = &self.buffer[start_index..end_index];
 
             for chunk in page_data.chunks(64) {
-                // fallible push/extend
                 let mut payload = heapless::Vec::<u8, {1 + 64}>::new();
-                payload.push(0x40).map_err(From::from)?;
+                payload.push(0x40).map_err(From::from)?; // データモード
                 payload.extend_from_slice(chunk).map_err(From::from)?;
                 self.i2c.write(self.address, &payload)?;
             }
