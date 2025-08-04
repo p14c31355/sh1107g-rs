@@ -51,7 +51,6 @@ where
     // 複数のコマンドをセットで送信するヘルパー関数
     // データシートに従い、1つのI2Cトランザクションで送信
     fn send_cmds(&mut self, cmds: &[u8]) -> Result<(), E> {
-        // コントロールバイト0x80 + コマンドバイト群
         let mut payload = heapless::Vec::<u8, 20>::new();
         payload.push(0x80).unwrap();
         payload.extend_from_slice(cmds).unwrap();
@@ -60,53 +59,33 @@ where
 
     /// Init display (U8g2ライブラリ準拠)
     pub fn init(&mut self) -> Result<(), E> {
-        // 1. ディスプレイをオフにする
-        self.send_cmd(0xAE)?;
-
-        // 2. Display Start Line
-        self.send_cmd(0x40)?;
-
-        // 3. Memory Addressing Mode (Page Addressing Mode)
-        self.send_cmds(&[0x20, 0x02])?;
-
-        // 4. Contrast Control
-        self.send_cmds(&[0x81, 0x80])?; // ★ ここを修正 ★
-
-        // 5. Segment Remap (通常表示)
-        self.send_cmd(0xA0)?; // ★ ここを修正 ★
-
-        // 6. Entire Display On / Off
-        self.send_cmd(0xA4)?;
-
-        // 7. Normal / Inverse Display
-        self.send_cmd(0xA6)?;
+        // 全ての初期化コマンドを一つの配列にまとめる
+        let init_cmds: &[u8] = &[
+            0xAE,           // Display Off
+            0x40,           // Display Start Line
+            0x20, 0x02,     // Memory Addressing Mode
+            0x81, 0x80,     // Contrast Control
+            0xA0,           // Segment Remap (通常表示)
+            0xA4,           // Entire Display On
+            0xA6,           // Normal Display
+            0xA8, 0x7F,     // Multiplex Ratio
+            0xD3, 0x60,     // Display Offset
+            0xD5, 0x51,     // Display Clock Divide Ratio
+            0xC0,           // COM Output Scan Direction (通常表示)
+            0xD9, 0x22,     // Pre-charge Period
+            0xDA, 0x12,     // COM Pins Hardware Configuration
+            0xDB, 0x35,     // VCOMH Deselect Level
+            0xAD, 0x8B,     // Charge Pump
+            0xAF,           // Display On
+        ];
         
-        // 8. Multiplex Ratio
-        self.send_cmds(&[0xA8, 0x7F])?;
-
-        // 9. Display Offset
-        self.send_cmds(&[0xD3, 0x60])?; 
-
-        // 10. Display Clock Divide Ratio / Oscillator Frequency
-        self.send_cmds(&[0xD5, 0x51])?; 
-
-        // 11. COM Output Scan Direction (通常表示)
-        self.send_cmd(0xC0)?; // ★ ここを修正 ★
-
-        // 12. Pre-charge Period
-        self.send_cmds(&[0xD9, 0x22])?;
-        
-        // 13. COM Pins Hardware Configuration
-        self.send_cmds(&[0xDA, 0x12])?;
-
-        // 14. VCOMH Deselect Level
-        self.send_cmds(&[0xDB, 0x35])?;
-
-        // 15. Charge Pump
-        self.send_cmds(&[0xAD, 0x8B])?;
-        
-        // 16. ディスプレイをオンにする
-        self.send_cmd(0xAF)?;
+        // 全てのコマンドを1回のI2Cトランザクションで送信
+        let mut payload = heapless::Vec::<u8, {1 + init_cmds.len()}>::new();
+        for &cmd in init_cmds {
+            payload.push(0x80).unwrap(); // 各コマンドの前に0x80を付加
+            payload.push(cmd).unwrap();
+        }
+        self.i2c.write(self.address, &payload)?;
 
         Ok(())
     }
