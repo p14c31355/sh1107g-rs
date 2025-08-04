@@ -7,6 +7,7 @@ use crate::error::Sh1107gError;
 
 #[cfg(feature = "sync")]
 use crate::{Sh1107g, Sh1107gBuilder};
+#[cfg(feature = "sync")]
 use crate::error::BuilderError;
 
 #[cfg(feature = "sync")]
@@ -99,7 +100,9 @@ where
         let mut payload = Vec::<u8, 34>::new();
         payload.push(0x00).map_err(|_| panic!("payload overflow"))?;
         payload.extend_from_slice(init_cmds).map_err(|_| panic!("payload overflow"))?;
-        self.i2c.write(self.address, &payload)?;
+        self.i2c.write(self.address, &payload)
+        .map_err(|e| Sh1107gError::I2cError(e))?;
+
 
         Ok(())
     }
