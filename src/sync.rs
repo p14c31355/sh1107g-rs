@@ -33,8 +33,6 @@ where
         Ok(_) => writeln!(serial, "INIT OK").ok(),
         Err(_) => writeln!(serial, "INIT FAILED").ok(),
     };
-
-
         Ok(oled)
     }
 }
@@ -111,23 +109,23 @@ where
         let page_width = crate::DISPLAY_WIDTH as usize;
 
         for page in 0..page_count {
-            // ページコマンドは今のままでOK
             self.send_cmd(0xB0 + page as u8)?;
             self.send_cmd(0x00)?;
             self.send_cmd(0x10)?;
 
-            // 128バイトを2回に分けて送信（例：64 + 64）
             let start_index = page * page_width;
             let end_index = start_index + page_width;
             let page_data = &self.buffer[start_index..end_index];
 
             for chunk in page_data.chunks(64) {
+                // fallible push/extend
                 let mut payload = heapless::Vec::<u8, {1 + 64}>::new();
-                payload.push(0x40).unwrap(); // データモード
-                payload.extend_from_slice(chunk).unwrap();
+                payload.push(0x40).map_err(|_| ())?; // or define a custom error type
+                payload.extend_from_slice(chunk).map_err(|_| ())?;
                 self.i2c.write(self.address, &payload)?;
             }
         }
+
         Ok(())
     }
 }
