@@ -56,7 +56,10 @@ where
 impl<I2C, E> Sh1107g<I2C>
 where
     I2C: embedded_hal::i2c::I2c<Error = E>,
-    E: for<'a> From<<Vec<u8, 64> as TryFrom<&'a [u8]>>::Error>,
+    E: core::fmt::Debug
+    + From<<heapless::Vec<u8, 64> as TryFrom<&'a [u8]>>::Error>
+    + From<heapless::i::CapacityError>,
+
 {
     // コマンドを単独で送信するヘルパー関数
     fn send_cmd(&mut self, cmd: u8) -> Result<(), E> {
