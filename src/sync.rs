@@ -80,11 +80,13 @@ where
 
     /// Rendering
     // Send self internal buffer
+    // flush() 関数全体をこのコードに置き換えてください
+
     pub fn flush(&mut self) -> Result<(), E> {
         use crate::DISPLAY_HEIGHT;
 
         let page_count = DISPLAY_HEIGHT as usize / 8;
-        let page_width = DISPLAY_WIDTH as usize;
+        let page_width = crate::DISPLAY_WIDTH as usize;
 
         for page in 0..page_count {
             // ページアドレス、カラムアドレスを設定
@@ -98,14 +100,13 @@ where
             let page_data = &self.buffer[start_index..end_index];
 
             // データの送信
-            // SH1107Gは1回のI2Cトランザクションで複数のデータを送る際に、
-            // コントロールバイト`0x40`を先頭に1回だけ付加する。
-            let mut data_payload = heapless::Vec::<u8, {1 + 128}>::new(); // 1 (control byte) + 128 (page_width)
-            data_payload.push(0x40).unwrap();
-            data_payload[1..].copy_from_slice(page_data);
+            // heapless::Vec を使ってコントロールバイトとデータを結合
+            let mut data_payload = heapless::Vec::<u8, {1 + 128}>::new();
+            data_payload.push(0x40).unwrap(); // コントロールバイトを先頭にプッシュ
+            data_payload.extend_from_slice(page_data).unwrap(); // ページデータを追加
+
             self.i2c.write(self.address, &data_payload)?;
         }
-
         Ok(())
     }
 }
