@@ -10,6 +10,12 @@ use core::result::Result;
 #[cfg(feature = "sync")]
 use core::result::Result::Ok;
 
+#[cfg(feature = "sync")]
+use ufmt::uwriteln;
+#[cfg(feature = "sync")]
+use ufmt_write::uWrite;
+
+
 // Sh1107g instance ( builded by builder ) call init and flush
 #[cfg(feature = "sync")]
 impl<I2C, E> Sh1107gBuilder<I2C>
@@ -18,20 +24,26 @@ where
 {
     /// Build Sh1107g instance
     pub fn build(self) -> Result<Sh1107g<I2C>, BuilderError> {
-        let i2c = self.i2c.ok_or(BuilderError::NoI2cConnected)?;
-        // let size = self.size.ok_or(BuilderError::NoDisplaySizeDefined)?; // サイズが必須の場合
-        // If you need, more add configure
+    uwriteln!(&mut serial, "BUILD START").ok();
+    let i2c = self.i2c.ok_or(BuilderError::NoI2cConnected)?;
+    uwriteln!(&mut serial, "I2C CONNECTED").ok();
 
-        let oled = Sh1107g::new(i2c, self.address
-            // size: size,
-            // rotation: self.rotation,
-            ); // Sh1107g::new init include buffer
+    let mut oled = Sh1107g::new(i2c, self.address);
+    uwriteln!(&mut serial, "DRIVER CREATED").ok();
 
-        // display initialize やるかどうか
-        Ok(oled)
-    }
+    // init() をここで呼んでるならここで止まる可能性あり
+    oled.init().ok(); // これで止まるなら、init() の問題
+
+    Ok(oled)
 }
 
+}
+
+// let size = self.size.ok_or(BuilderError::NoDisplaySizeDefined)?; // サイズが必須の場合
+        // If you need, more add configure
+// size: size,
+            // rotation: self.rotation,// Sh1107g::new init include buffer
+            // display initialize やるかどうか
 // Sh1107g impl block
 #[cfg(feature = "sync")]
 // sync.rs または async.rs

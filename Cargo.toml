@@ -18,6 +18,7 @@ embedded-graphics = { version = "0.8.1", default-features = false }
 embedded-graphics-core = "0.4.0"
 
 embedded-hal-async = { version = "1.0.0", optional = true }
+ufmt = "0.2.0"
 
 [features]
 default = ["sync"]
