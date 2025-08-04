@@ -80,7 +80,7 @@ where
         ];
         
         // 全てのコマンドを1回のI2Cトランザクションで送信
-        let mut payload = heapless::Vec::<u8, {1 + init_cmds.len()}>::new();
+        let mut payload = heapless::Vec::<u8, 34>::new(); // 1 (control byte) + 33 (max commands * 2 bytes each)
         for &cmd in init_cmds {
             payload.push(0x80).unwrap(); // 各コマンドの前に0x80を付加
             payload.push(cmd).unwrap();
