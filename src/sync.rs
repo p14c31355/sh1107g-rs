@@ -3,23 +3,19 @@
 use embedded_hal::i2c::I2c;
 
 #[cfg(feature = "sync")]
-use crate::{cmds::*, BuilderError, Sh1107g, Sh1107gBuilder, DISPLAY_WIDTH};
+use crate::{BuilderError, Sh1107g, Sh1107gBuilder};
 
 #[cfg(feature = "sync")]
 use core::result::Result;
 #[cfg(feature = "sync")]
 use core::result::Result::Ok;
-#[cfg(feature = "sync")]
-use core::convert::TryFrom;
-#[cfg(feature = "sync")]
-use heapless::Vec;
-
 
 // Sh1107g instance ( builded by builder ) call init and flush
 #[cfg(feature = "sync")]
 impl<I2C, E> Sh1107gBuilder<I2C>
 where
     I2C: I2c<Error = E>,
+    E: core::fmt::Debug + From<()>,
 {
     pub fn build(
         mut self,
@@ -56,11 +52,8 @@ where
 #[cfg(feature = "sync")]
 impl<I2C, E> Sh1107g<I2C>
 where
-    I2C: embedded_hal::i2c::Write<Error = E>,
-    E: core::fmt::Debug
-        + for<'a> From<<heapless::Vec<u8, 64> as TryFrom<&'a [u8]>>::Error>
-        + From<heapless::CapacityError>,
-
+    I2C: embedded_hal::i2c::I2c<Error = E>,
+    E: core::fmt::Debug + From<()>,
 {
     // コマンドを単独で送信するヘルパー関数
     fn send_cmd(&mut self, cmd: u8) -> Result<(), E> {
@@ -70,14 +63,16 @@ where
 
     // 複数のコマンドをセットで送信するヘルパー関数
     fn send_cmds(&mut self, cmds: &[u8]) -> Result<(), E> {
-        let mut payload = heapless::Vec::<u8, 20>::new();
-        payload.push(0x80).map_err(From::from)?;
-        payload.extend_from_slice(cmds).map_err(From::from)?;
+        use heapless::Vec;
+        let mut payload = Vec::<u8, 20>::new();
+        payload.push(0x80).map_err(|_| E::from(()))?;
+        payload.extend_from_slice(cmds).map_err(|_| E::from(()))?;
         self.i2c.write(self.address, &payload)
     }
 
     /// Init display (U8g2ライブラリ準拠)
     pub fn init(&mut self) -> Result<(), E> {
+        use heapless::Vec;
         let init_cmds: &[u8] = &[
             0xAE,           // Display Off
             0x40,           // Display Start Line
@@ -97,9 +92,9 @@ where
             0xAF,           // Display On
         ];
 
-        let mut payload = heapless::Vec::<u8, 34>::new();
+        let mut payload = Vec::<u8, 34>::new();
         payload.push(0x00).ok(); // コマンドモード
-        payload.extend_from_slice(init_cmds).unwrap();
+        payload.extend_from_slice(init_cmds).map_err(|_| E::from(()))?;
         self.i2c.write(self.address, &payload)?;
 
         Ok(())
@@ -108,9 +103,11 @@ where
     /// Rendering
     pub fn flush(&mut self) -> Result<(), E> {
         use crate::DISPLAY_HEIGHT;
+        use crate::DISPLAY_WIDTH;
+        use heapless::Vec;
 
         let page_count = DISPLAY_HEIGHT as usize / 8;
-        let page_width = crate::DISPLAY_WIDTH as usize;
+        let page_width = DISPLAY_WIDTH as usize;
 
         for page in 0..page_count {
             self.send_cmd(0xB0 + page as u8)?; // ページアドレス
@@ -122,9 +119,9 @@ where
             let page_data = &self.buffer[start_index..end_index];
 
             for chunk in page_data.chunks(64) {
-                let mut payload = heapless::Vec::<u8, {1 + 64}>::new();
-                payload.push(0x40).map_err(From::from)?; // データモード
-                payload.extend_from_slice(chunk).map_err(From::from)?;
+                let mut payload = Vec::<u8, {1 + 64}>::new();
+                payload.push(0x40).map_err(|_| E::from(()))?; // データモード
+                payload.extend_from_slice(chunk).map_err(|_| E::from(()))?;
                 self.i2c.write(self.address, &payload)?;
             }
         }
