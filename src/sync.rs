@@ -1,7 +1,5 @@
 // src/sync.rs
 /// sync
-#[cfg(feature = "sync")]
-use embedded_hal::i2c::I2c;
 
 #[cfg(feature = "sync")]
 use crate::error::{Sh1107gError, BuilderError};
@@ -15,8 +13,6 @@ use core::result::{Result, Result::Ok};
 #[cfg(feature = "sync")]
 use ufmt::uwriteln;
 
-#[cfg(feature = "sync")]
-use core::fmt::Write;
 #[cfg(feature = "sync")]
 use ufmt::uWrite;
 
@@ -117,15 +113,9 @@ where
         Ok(())
     }
 
-    /// Clear display buffer
-    pub fn clear(&mut self) {
-        self.buffer.fill(0);
-    }
-
     /// Rendering
     pub fn flush(&mut self) -> Result<(), Sh1107gError<E>> {
     use crate::{DISPLAY_HEIGHT, DISPLAY_WIDTH};
-    use heapless::Vec;
 
     let page_count = DISPLAY_HEIGHT as usize / 8;
     let page_width = DISPLAY_WIDTH as usize;
