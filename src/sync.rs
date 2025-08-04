@@ -24,6 +24,7 @@ where
         self,
         serial: &mut dyn core::fmt::Write,
     ) -> Result<Sh1107g<I2C>, Sh1107gError<E>> {
+        writeln!(serial, "BUILD START").ok();
 
         let i2c = self.i2c.ok_or(Sh1107gError::Builder(BuilderError::NoI2cConnected))?;
         writeln!(serial, "I2C CONNECTED").ok();
@@ -31,14 +32,12 @@ where
         let mut oled = Sh1107g::new(i2c, self.address);
         writeln!(serial, "DRIVER CREATED").ok();
 
-        // init() を直接呼び出し、エラーは?演算子で処理
-        // この時点でEはFrom<()>を満たすため、問題ない
         match oled.init() {
             Ok(_) => writeln!(serial, "INIT OK").ok(),
             Err(_) => writeln!(serial, "INIT FAILED").ok(),
         };
 
-        Ok(Sh1107g::new(i2c, self.address))
+        Ok(oled)
     }
 }
 
