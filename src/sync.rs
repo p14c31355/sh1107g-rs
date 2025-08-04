@@ -20,24 +20,30 @@ use ufmt_write::uWrite;
 #[cfg(feature = "sync")]
 impl<I2C, E> Sh1107gBuilder<I2C>
 where
-    I2C: embedded_hal::i2c::I2c<Error = E>,
+    I2C: core::fmt::Write<Error = E>,
 {
-    /// Build Sh1107g instance
-    pub fn build(self) -> Result<Sh1107g<I2C>, BuilderError> {
-    uwriteln!(&mut serial, "BUILD START").ok();
-    let i2c = self.i2c.ok_or(BuilderError::NoI2cConnected)?;
-    uwriteln!(&mut serial, "I2C CONNECTED").ok();
+    pub fn build(
+        mut self,
+        serial: &mut dyn uWrite<Error = core::fmt::Error>,
+    ) -> Result<Sh1107g<I2C>, BuilderError> {
+        uwriteln!(serial, "BUILD START").ok();
 
-    let mut oled = Sh1107g::new(i2c, self.address);
-    uwriteln!(&mut serial, "DRIVER CREATED").ok();
+        let i2c = self.i2c.ok_or(BuilderError::NoI2cConnected)?;
+        uwriteln!(serial, "I2C CONNECTED").ok();
 
-    // init() をここで呼んでるならここで止まる可能性あり
-    oled.init().ok(); // これで止まるなら、init() の問題
+        let mut oled = Sh1107g::new(i2c, self.address);
+        uwriteln!(serial, "DRIVER CREATED").ok();
 
-    Ok(oled)
+        // 初期化（ここで止まることが多い）
+        match oled.init() {
+            Ok(_) => uwriteln!(serial, "INIT OK").ok(),
+            Err(_) => uwriteln!(serial, "INIT FAILED").ok(),
+        }
+
+        Ok(oled)
+    }
 }
 
-}
 
 // let size = self.size.ok_or(BuilderError::NoDisplaySizeDefined)?; // サイズが必須の場合
         // If you need, more add configure
