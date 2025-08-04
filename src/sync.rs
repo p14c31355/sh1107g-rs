@@ -20,7 +20,6 @@ where
     pub fn build(self) -> Result<Sh1107g<I2C>, BuilderError> {
         let i2c = self.i2c.ok_or(BuilderError::NoI2cConnected)?;
         // let size = self.size.ok_or(BuilderError::NoDisplaySizeDefined)?; // サイズが必須の場合
-
         // If you need, more add configure
 
         let oled = Sh1107g::new(i2c, self.address
@@ -80,7 +79,7 @@ where
         ];
         
         let mut payload = heapless::Vec::<u8, 34>::new();
-        payload.push(0x00).unwrap(); // 0x00: コマンドモードの制御バイト
+        payload.push(0x00).ok(); // 0x00: コマンドモードの制御バイト
         payload.extend_from_slice(init_cmds).unwrap();
         self.i2c.write(self.address, &payload)?;
 
