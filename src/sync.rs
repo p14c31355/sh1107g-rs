@@ -40,23 +40,73 @@ where
     I2C: I2c<Error = E>,
 {
     /// Display initialize sequence
+    // sync.rs または async_.rs
+
+// cmds.rsからimportしている定数は、念のため以下でマジックナンバーに置き換えてください。
+// 例: DISPLAY_OFF -> 0xAE
+// ...
+
     pub fn init(&mut self) -> Result<(), E> {
-        self.send_cmd(DISPLAY_OFF)?; // Display Off
-        self.send_cmdandarg(DISPLAY_START_LINE_CMD, DISPLAY_START_LINE_DATA)?; // Set Display Start Line
-        self.send_cmdandarg(CLOCK_DIVIDE_CMD, CLOCK_DIVIDE_DATA)?; // Set Display Clock Divide Ratio / Osc Frequency (Pythonで0x51)
-        self.send_cmdandarg(SET_MULTIPLEX_RATIO, MULTIPLEX_RATIO_DATA)?; // Set Multiplex Ratio (128行対応)
-        self.send_cmdandarg(DISPLAY_OFFSET_CMD, DISPLAY_OFFSET_DATA)?; // Set Display Offset (Pythonで0x60)
-        self.send_cmdandarg(CHARGE_PUMP_ON_CMD, CHARGE_PUMP_ON_DATA)?; // Set Charge Pump (Pythonで0x8B, データシートでは8BhがEnable)
-        self.send_cmdandarg(PAGE_ADDRESSING_CMD, 0x02)?; // Set Memory Addressing Mode (Page Addressing Mode)
-        self.send_cmdandarg(SET_COM_PINS_CMD, SET_COM_PINS_DATA)?; // Set COM Pins Hardware Config (Pythonで0x12)
-        self.send_cmdandarg(CONTRAST_CONTROL_CMD, CONTRAST_CONTROL_DATA)?; // Contrast Control (0x2Fは一般的な値)
-        self.send_cmdandarg(PRECHARGE_CMD, PRECHARGE_DATA)?; // Set Pre-charge Period
-        self.send_cmd(SEGMENT_REMAP)?; // Set Segment Remap (通常はA0hかA1h)
-        self.send_cmd(COM_OUTPUT_SCAN_DIR)?; // Set COM Output Scan Direction (C0h: Normal, C8h: Re-mapped)
-        self.send_cmdandarg(VCOM_DESELECT_CMD, VCOM_DESELECT_DATA)?; // Set VCOM Deselect Level
-        self.send_cmd(SET_ENTIRE_DISPLAY_ON_OFF_CMD)?; // Set Entire Display ON / OFF (A4h: Normal Display)
-        self.send_cmd(SET_NORMAL_INVERSE_DISPLAY_CMD)?; // Set Normal / Inverse Display (A6h: Normal)
-        self.send_cmd(DISPLAY_ON)?; // Display ON
+        // 1. ディスプレイをオフにする
+        self.send_cmd(0xAE)?;
+
+        // 2. Display Clock Divide Ratio と Oscillator Frequency を設定 (Pythonで0x51)
+        //    コマンドは0xD5, 引数は0x51
+        self.send_cmdandarg(0xD5, 0x51)?;
+
+        // 3. Multiplex Ratio を設定 (128x128ディスプレイでは 0x7F)
+        //    コマンドは0xA8, 引数は0x7F
+        self.send_cmdandarg(0xA8, 0x7F)?;
+
+        // 4. Display Offset を設定 (Pythonで0x60)
+        //    コマンドは0xD3, 引数は0x60
+        self.send_cmdandarg(0xD3, 0x60)?;
+
+        // 5. Display Start Line を設定 (リセット後のデフォルト値は0x00)
+        //    このコマンドは0x40から0x7Fまでの範囲。
+        //    0x40は「Set Display Start Line」コマンドそのものであり、引数を必要としません。
+        //    そのため、0x40 + 0x00 = 0x40 を送ることで開始ライン0を設定します。
+        self.send_cmd(0x40)?;
+
+        // 6. Charge Pump を設定 (Pythonで0x8B)
+        //    コマンドは0xAD, 引数は0x8B
+        self.send_cmdandarg(0xAD, 0x8B)?;
+        
+        // 7. Segment Remap と COM Output Scan Direction を設定
+        //    これはディスプレイの向きを制御する重要なコマンドです。
+        //    0xA1: Segmentを反転 (Remapped)
+        //    0xC8: COMスキャン方向を反転 (Remapped)
+        self.send_cmd(0xA1)?;
+        self.send_cmd(0xC8)?;
+        
+        // 8. COM Pins Hardware Configuration を設定
+        //    コマンドは0xDA, 引数は0x12 (128x128では通常この値)
+        self.send_cmdandarg(0xDA, 0x12)?;
+
+        // 9. Contrast Control を設定 (0x2Fは一般的な値)
+        //    コマンドは0x81, 引数は0x2F
+        self.send_cmdandarg(0x81, 0x2F)?;
+
+        // 10. VCOMH Deselect Level を設定
+        //     コマンドは0xDB, 引数は0x35
+        self.send_cmdandarg(0xDB, 0x35)?;
+
+        // 11. Pre-charge Period を設定
+        //     コマンドは0xD9, 引数は0x22
+        self.send_cmdandarg(0xD9, 0x22)?;
+
+        // 12. Entire Display On/Off を設定 (A4h: RAMの内容を通常表示)
+        self.send_cmd(0xA4)?;
+
+        // 13. Normal/Inverse Display を設定 (A6h: 通常表示)
+        self.send_cmd(0xA6)?;
+
+        // 14. メモリモードを設定 (Page Addressing Mode)
+        //     コマンドは0x20, 引数は0x02
+        self.send_cmdandarg(0x20, 0x02)?;
+
+        // 15. ディスプレイをオンにする (初期化シーケンスの最後に配置)
+        self.send_cmd(0xAF)?;
 
         Ok(())
     }
