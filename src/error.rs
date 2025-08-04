@@ -20,8 +20,8 @@ impl From<BuilderError> for Sh1107gError<core::convert::Infallible> {
     }
 }
 
-impl From<avr_hal_generic::i2c::Error> for Sh1107gError<avr_hal_generic::i2c::Error> {
-    fn from(e: avr_hal_generic::i2c::Error) -> Self {
+impl From<embedded_hal::i2c::Error> for Sh1107gError<embedded_hal::i2c::Error> {
+    fn from(e: embedded_hal::i2c::Error) -> Self {
         Sh1107gError::I2cError(e)
     }
 }
