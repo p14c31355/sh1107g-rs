@@ -21,6 +21,7 @@ embedded-hal-async = { version = "1.0.0", optional = true }
 ufmt = "0.2.0"
 ufmt-write = "0.1.0"
 ufmt-macros = "0.3.0"
+defmt = "1.0.1"
 
 [features]
 default = ["sync"]

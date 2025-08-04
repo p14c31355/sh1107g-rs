@@ -34,11 +34,13 @@ where
         uwriteln!(serial, "I2C CONNECTED").ok();
 
         let mut oled = Sh1107g::new(i2c, self.address);
-        uwriteln!(serial, "DRIVER CREATED").ok();
+        defmt::info!("DRIVER CREATED");
 
-        oled.init()?;
-
-        uwriteln!(serial, "INIT OK").ok();
+    if let Err(e) = oled.init() {
+        defmt::error!("init failed: {:?}", e);
+    } else {
+        defmt::info!("INIT OK");
+    }
         Ok(oled)
     }
 }
@@ -68,11 +70,6 @@ where
 
     /// Init display (U8g2ライブラリ準拠)
     pub fn init(&mut self) -> Result<(), Sh1107gError<E>> {
-        use heapless::Vec;
-
-        // デバッグ：init() 開始ログ
-        // uwriteln!(serial, "init() start").ok(); // serial を受け取るようにするなら
-
         let init_cmds: &[u8] = &[
             0xAE, 0x40, 0x20, 0x02, 0x81, 0x80, 0xA0, 0xA4,
             0xA6, 0xA8, 0x7F, 0xD3, 0x60, 0xD5, 0x51, 0xC0,
@@ -80,20 +77,33 @@ where
             0xAF,
         ];
 
-        // Vecのサイズを増やしてみる（保険）
-        let mut payload = Vec::<u8, 40>::new(); // ← 増やしてみる！
+        // 1. payloadの作成
+        let mut payload = heapless::Vec::<u8, 40>::new(); // ←サイズ保険
+        defmt::info!("init() start");
 
+        // 2. push(0x00)
         payload.push(0x00).map_err(|_| {
-            // uwriteln!(serial, "Payload push failed!").ok();
+            defmt::error!("push failed");
             Sh1107gError::PayloadOverflow
         })?;
 
+        defmt::info!("push OK");
+
+        // 3. extend_from_slice
         payload.extend_from_slice(init_cmds).map_err(|_| {
-            // uwriteln!(serial, "extend_from_slice failed!").ok();
+            defmt::error!("extend_from_slice failed");
             Sh1107gError::PayloadOverflow
         })?;
 
-        self.i2c.write(self.address, &payload).map_err(Sh1107gError::I2cError)?;
+        defmt::info!("extend OK");
+
+        // 4. I2C write
+        self.i2c.write(self.address, &payload).map_err(|e| {
+            defmt::error!("i2c.write failed");
+            Sh1107gError::I2cError(e)
+        })?;
+
+        defmt::info!("write OK");
 
         Ok(())
     }
