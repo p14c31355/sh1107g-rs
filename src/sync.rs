@@ -21,6 +21,8 @@ use ufmt::uwriteln;
 
 #[cfg(feature = "sync")]
 use core::fmt::Write;
+#[cfg(feature = "sync")]
+use ufmt::uWrite;
 
 // Sh1107g instance ( builded by builder ) call init and flush
 #[cfg(feature = "sync")]
@@ -104,23 +106,25 @@ where
         Ok(())
     }
 
-    fn write_command_list(
-        &mut self,
-        payload: &[u8],
-        serial: &mut impl Write,
-    ) -> Result<(), E> {
-        for (i, b) in payload.iter().enumerate() {
-            let _ = writeln!(serial, "CMD[{}] = 0x{:02X}", i, b);
-            self.i2c
-                .write(self.address, &[*b])
-                .map_err(|e| {
-                    let _ = writeln!(serial, "I2C ERROR: {:?}", e);
-                    e
-                })?;
+    pub fn write_command_list<I2C, E, W: uWrite>(
+        i2c: &mut I2C,
+        address: u8,
+        cmds: &[u8],
+        serial: &mut W,
+    ) -> Result<(), E>
+    where
+        I2C: embedded_hal::i2c::ErrorType<Error = E> + embedded_hal::i2c::Write,
+    {
+        for (i, &cmd) in cmds.iter().enumerate() {
+            // シリアルログ出力（失敗しても無視）
+            let _ = uwriteln!(serial, "CMD[{}] = 0x{:02X}", i, cmd);
+
+            // OLED にコマンド送信
+            i2c.write(address, &[0x00, cmd])?; // 0x00 は command prefix
         }
         Ok(())
     }
-    
+
     /// Clear display buffer
     pub fn clear(&mut self) {
         self.buffer.fill(0);
