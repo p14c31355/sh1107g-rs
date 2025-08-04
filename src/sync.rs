@@ -82,14 +82,14 @@ where
         self.send_cmds(&[0x20, 0x02])?;
 
         // 8. Segment Remap と COM Output Scan Direction
-        self.send_cmd(0xA1)?;
-        self.send_cmd(0xC8)?;
+        self.send_cmd(0xA0)?;
+        self.send_cmd(0xC0)?;
         
         // 9. COM Pins Hardware Configuration
         self.send_cmds(&[0xDA, 0x12])?;
 
         // 10. Contrast Control
-        self.send_cmds(&[0x81, 0x2F])?;
+        self.send_cmds(&[0x81, 0x80])?;
 
         // 11. Pre-charge Period
         self.send_cmds(&[0xD9, 0x22])?;
