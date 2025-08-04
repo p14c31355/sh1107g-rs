@@ -15,11 +15,16 @@ pub enum Sh1107gError<I2cE> {
 }
 
 // From 実装で `?` を使えるように、I2Cエラーをラップする
-impl<I2cE> From<I2cE> for Sh1107gError<I2cE> {
+// ただし、I2cE がユニット型 () の場合はこの実装を適用しない
+impl<I2cE> From<I2cE> for Sh1107gError<I2cE>
+where
+    I2cE: core::fmt::Debug, // 必要に応じてI2cEに制約を追加
+{
     fn from(e: I2cE) -> Self {
         Sh1107gError::I2cError(e)
     }
 }
+
 
 // `E: From<()>` の要件を満たすために From<()> を実装
 // この実装は、E0599エラーを解決するために必要です。
