@@ -1,5 +1,5 @@
 // src/error.rs
-use ufmt::uDebug;
+use ufmt_macros::uDebug;
 
 #[derive(Debug, uDebug)]
 pub enum BuilderError {
