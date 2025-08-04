@@ -58,52 +58,54 @@ where
         self.i2c.write(self.address, &payload)
     }
 
-    /// Init display (データシート準拠)
+    /// Init display (U8g2ライブラリ準拠)
     pub fn init(&mut self) -> Result<(), E> {
         // 1. ディスプレイをオフにする
         self.send_cmd(0xAE)?;
 
-        // 2. Display Clock Divide Ratio / Oscillator Frequency
-        self.send_cmds(&[0xD5, 0x51])?; 
-
-        // 3. Multiplex Ratio (128行に対応)
-        self.send_cmds(&[0xA8, 0x7F])?; 
-
-        // 4. Display Offset
-        self.send_cmds(&[0xD3, 0x60])?; 
-
-        // 5. Display Start Line
+        // 2. Display Start Line
         self.send_cmd(0x40)?;
 
-        // 6. Charge Pump
-        self.send_cmds(&[0xAD, 0x8B])?;
-        
-        // 7. Memory Addressing Mode (Page Addressing Mode)
+        // 3. Memory Addressing Mode (Page Addressing Mode)
         self.send_cmds(&[0x20, 0x02])?;
 
-        // 8. Segment Remap と COM Output Scan Direction
-        self.send_cmd(0xA0)?;
-        self.send_cmd(0xC0)?;
-        
-        // 9. COM Pins Hardware Configuration
-        self.send_cmds(&[0xDA, 0x12])?;
+        // 4. Contrast Control
+        self.send_cmds(&[0x81, 0x80])?; // ★ ここを修正 ★
 
-        // 10. Contrast Control
-        self.send_cmds(&[0x81, 0x80])?;
+        // 5. Segment Remap (通常表示)
+        self.send_cmd(0xA0)?; // ★ ここを修正 ★
 
-        // 11. Pre-charge Period
-        self.send_cmds(&[0xD9, 0x22])?;
-        
-        // 12. VCOMH Deselect Level
-        self.send_cmds(&[0xDB, 0x35])?;
-
-        // 13. Entire Display On / Off
+        // 6. Entire Display On / Off
         self.send_cmd(0xA4)?;
 
-        // 14. Normal / Inverse Display
-        self.send_cmd(0xA6)?; 
+        // 7. Normal / Inverse Display
+        self.send_cmd(0xA6)?;
         
-        // 15. ディスプレイをオンにする
+        // 8. Multiplex Ratio
+        self.send_cmds(&[0xA8, 0x7F])?;
+
+        // 9. Display Offset
+        self.send_cmds(&[0xD3, 0x60])?; 
+
+        // 10. Display Clock Divide Ratio / Oscillator Frequency
+        self.send_cmds(&[0xD5, 0x51])?; 
+
+        // 11. COM Output Scan Direction (通常表示)
+        self.send_cmd(0xC0)?; // ★ ここを修正 ★
+
+        // 12. Pre-charge Period
+        self.send_cmds(&[0xD9, 0x22])?;
+        
+        // 13. COM Pins Hardware Configuration
+        self.send_cmds(&[0xDA, 0x12])?;
+
+        // 14. VCOMH Deselect Level
+        self.send_cmds(&[0xDB, 0x35])?;
+
+        // 15. Charge Pump
+        self.send_cmds(&[0xAD, 0x8B])?;
+        
+        // 16. ディスプレイをオンにする
         self.send_cmd(0xAF)?;
 
         Ok(())
