@@ -1,4 +1,3 @@
-// src/error.rs
 use ufmt::derive::uDebug;
 
 #[derive(Debug, uDebug)]
@@ -14,14 +13,17 @@ pub enum Sh1107gError<I2cE> {
     I2cError(I2cE),
 }
 
-impl From<BuilderError> for Sh1107gError<core::convert::Infallible> {
+impl<I2cE> From<BuilderError> for Sh1107gError<I2cE> {
     fn from(e: BuilderError) -> Self {
         Sh1107gError::Builder(e)
     }
 }
 
-impl From<embedded_hal::i2c::Error> for Sh1107gError<embedded_hal::i2c::Error> {
-    fn from(e: embedded_hal::i2c::Error) -> Self {
+impl<I2cE> From<I2cE> for Sh1107gError<I2cE>
+where
+    I2cE: embedded_hal::i2c::Error,
+{
+    fn from(e: I2cE) -> Self {
         Sh1107gError::I2cError(e)
     }
 }
