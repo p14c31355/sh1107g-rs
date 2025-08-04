@@ -102,6 +102,7 @@ impl<I2C> Sh1107gBuilder<I2C> {
 #[derive(Debug)]
 pub enum BuilderError {
     NoI2cConnected,
+    InitFailed,
     // NoDisplaySizeDefined, // サイズが必須の場合
 }
 // embedded-halのErrorトレイトにも対応させる必要があるかもしれません

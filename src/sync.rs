@@ -15,11 +15,11 @@ use core::result::Result::Ok;
 impl<I2C, E> Sh1107gBuilder<I2C>
 where
     I2C: I2c<Error = E>,
-    E: core::fmt::Debug + From<()>,
+    E: core::fmt::Debug,
 {
     pub fn build(
         mut self,
-        serial: &mut dyn core::fmt::Write, // ← fmt::Write 経由でログ出力
+        serial: &mut dyn core::fmt::Write,
     ) -> Result<Sh1107g<I2C>, BuilderError> {
         writeln!(serial, "BUILD START").ok();
 
@@ -29,12 +29,17 @@ where
         let mut oled = Sh1107g::new(i2c, self.address);
         writeln!(serial, "DRIVER CREATED").ok();
 
+        // init() の結果を適切に処理
         match oled.init() {
-            Ok(_) => writeln!(serial, "INIT OK").ok(),
-            Err(_) => writeln!(serial, "INIT FAILED").ok(),
-        };
-
-        Ok(oled)
+            Ok(_) => {
+                writeln!(serial, "INIT OK").ok();
+                Ok(oled)
+            },
+            Err(e) => {
+                writeln!(serial, "INIT FAILED: {:?}", e).ok();
+                Err(BuilderError::InitFailed) // BuilderError を返す
+            }
+        }
     }
 }
 
@@ -65,8 +70,8 @@ where
     fn send_cmds(&mut self, cmds: &[u8]) -> Result<(), E> {
         use heapless::Vec;
         let mut payload = Vec::<u8, 20>::new();
-        payload.push(0x80).map_err(|_| E::from(()))?;
-        payload.extend_from_slice(cmds).map_err(|_| E::from(()))?;
+        payload.push(0x80).map_err(|_| { /* ここで適切なエラーに変換 */ })?;
+        payload.extend_from_slice(cmds).map_err(|_| { /* ここで適切なエラーに変換 */ })?;
         self.i2c.write(self.address, &payload)
     }
 
