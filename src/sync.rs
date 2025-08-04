@@ -15,7 +15,7 @@ use core::result::Result::Ok;
 impl<I2C, E> Sh1107gBuilder<I2C>
 where
     I2C: I2c<Error = E>,
-    E: core::fmt::Debug,
+    E: core::fmt::Debug + From<()>, // From<()> を再度追加
 {
     pub fn build(
         mut self,
@@ -29,29 +29,22 @@ where
         let mut oled = Sh1107g::new(i2c, self.address);
         writeln!(serial, "DRIVER CREATED").ok();
 
-        // init() の結果を適切に処理
+        // init() を直接呼び出し、エラーは?演算子で処理
+        // この時点でEはFrom<()>を満たすため、問題ない
         match oled.init() {
-            Ok(_) => {
-                writeln!(serial, "INIT OK").ok();
-                Ok(oled)
-            },
-            Err(e) => {
-                writeln!(serial, "INIT FAILED: {:?}", e).ok();
-                Err(BuilderError::InitFailed) // BuilderError を返す
-            }
-        }
+            Ok(_) => writeln!(serial, "INIT OK").ok(),
+            Err(_) => writeln!(serial, "INIT FAILED").ok(),
+        };
+
+        Ok(oled)
     }
 }
-
 
 // let size = self.size.ok_or(BuilderError::NoDisplaySizeDefined)?; // サイズが必須の場合
         // If you need, more add configure
 // size: size,
             // rotation: self.rotation,// Sh1107g::new init include buffer
             // display initialize やるかどうか
-// Sh1107g impl block
-#[cfg(feature = "sync")]
-// sync.rs または async.rs
 
 // Sh1107g impl block
 #[cfg(feature = "sync")]
