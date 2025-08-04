@@ -51,7 +51,7 @@ where
 impl<I2C, E> Sh1107g<I2C>
 where
     I2C: embedded_hal::i2c::I2c<Error = E>,
-    E: core::fmt::Debug + From<()>,
+    E: core::fmt::Debug,
 {
     // コマンドを単独で送信するヘルパー関数
     fn send_cmd(&mut self, cmd: u8) -> Result<(), E> {
@@ -60,11 +60,12 @@ where
     }
 
     // 複数のコマンドをセットで送信するヘルパー関数
+    // send_cmds の push エラーを独自に変換
     fn send_cmds(&mut self, cmds: &[u8]) -> Result<(), E> {
         use heapless::Vec;
         let mut payload = Vec::<u8, 20>::new();
-        payload.push(0x80).map_err(|_| { /* ここで適切なエラーに変換 */ })?;
-        payload.extend_from_slice(cmds).map_err(|_| { /* ここで適切なエラーに変換 */ })?;
+        payload.push(0x80).map_err(|_| /* 適切なエラーに変換。例えばpanicや独自エラー */ panic!("payload overflow"))?;
+        payload.extend_from_slice(cmds).map_err(|_| panic!("payload overflow"))?;
         self.i2c.write(self.address, &payload)
     }
 
@@ -91,8 +92,8 @@ where
         ];
 
         let mut payload = Vec::<u8, 34>::new();
-        payload.push(0x00).ok(); // コマンドモード
-        payload.extend_from_slice(init_cmds).map_err(|_| E::from(()))?;
+        payload.push(0x00).map_err(|_| panic!("payload overflow"))?;
+        payload.extend_from_slice(init_cmds).map_err(|_| panic!("payload overflow"))?;
         self.i2c.write(self.address, &payload)?;
 
         Ok(())
@@ -100,30 +101,29 @@ where
 
     /// Rendering
     pub fn flush(&mut self) -> Result<(), E> {
-        use crate::DISPLAY_HEIGHT;
-        use crate::DISPLAY_WIDTH;
-        use heapless::Vec;
+    use crate::{DISPLAY_HEIGHT, DISPLAY_WIDTH};
+    use heapless::Vec;
 
-        let page_count = DISPLAY_HEIGHT as usize / 8;
-        let page_width = DISPLAY_WIDTH as usize;
+    let page_count = DISPLAY_HEIGHT as usize / 8;
+    let page_width = DISPLAY_WIDTH as usize;
 
-        for page in 0..page_count {
-            self.send_cmd(0xB0 + page as u8)?; // ページアドレス
-            self.send_cmd(0x00)?;              // 下位カラム
-            self.send_cmd(0x10)?;              // 上位カラム
+    for page in 0..page_count {
+            self.send_cmd(0xB0 + page as u8)?;
+            self.send_cmd(0x00)?;
+            self.send_cmd(0x10)?;
 
-            let start_index = page * page_width;
-            let end_index = start_index + page_width;
-            let page_data = &self.buffer[start_index..end_index];
+        let start_index = page * page_width;
+        let end_index = start_index + page_width;
+        let page_data = &self.buffer[start_index..end_index];
 
-            for chunk in page_data.chunks(64) {
-                let mut payload = Vec::<u8, {1 + 64}>::new();
-                payload.push(0x40).map_err(|_| E::from(()))?; // データモード
-                payload.extend_from_slice(chunk).map_err(|_| E::from(()))?;
-                self.i2c.write(self.address, &payload)?;
-            }
+        for chunk in page_data.chunks(64) {
+            let mut payload = Vec::<u8, {1 + 64}>::new();
+            payload.push(0x40).map_err(|_| panic!("payload overflow"))?;
+            payload.extend_from_slice(chunk).map_err(|_| panic!("payload overflow"))?;
+            self.i2c.write(self.address, &payload)?;
         }
-
-        Ok(())
     }
+    Ok(())
+}
+
 }
