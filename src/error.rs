@@ -14,18 +14,14 @@ pub enum Sh1107gError<I2cE> {
     I2cError(I2cE),
 }
 
-// BuilderErrorをSh1107gErrorに変換するためのFrom実装
-// `Sh1107gBuilder::build`メソッドで`?`演算子を使用するために必要
 impl From<BuilderError> for Sh1107gError<core::convert::Infallible> {
     fn from(e: BuilderError) -> Self {
         Sh1107gError::Builder(e)
     }
 }
 
-// PayloadOverflowをSh1107gErrorに変換するためのFrom実装
-
-impl<I2cE> From<I2cE> for Sh1107gError<I2cE> {
-    fn from(e: I2cE) -> Self {
+impl From<avr_hal_generic::i2c::Error> for Sh1107gError<avr_hal_generic::i2c::Error> {
+    fn from(e: avr_hal_generic::i2c::Error) -> Self {
         Sh1107gError::I2cError(e)
     }
 }
