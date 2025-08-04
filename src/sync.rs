@@ -13,6 +13,9 @@ use core::result::Result;
 #[cfg(feature = "sync")]
 use core::result::Result::Ok;
 
+#[cfg(feature = "sync")]
+use ufmt::uwriteln;
+
 // Sh1107g instance ( builded by builder ) call init and flush
 #[cfg(feature = "sync")]
 impl<I2C, E> Sh1107gBuilder<I2C>
@@ -22,19 +25,19 @@ where
 {
     pub fn build(
         self,
-        serial: &mut dyn core::fmt::Write,
+        serial: &mut dyn ufmt::uWrite<Error = core::convert::Infallible>,
     ) -> Result<Sh1107g<I2C>, Sh1107gError<E>> {
-        writeln!(serial, "BUILD START").ok();
+        uwriteln!(serial, "BUILD START").ok();
 
         let i2c = self.i2c.ok_or(Sh1107gError::Builder(BuilderError::NoI2cConnected))?;
-        writeln!(serial, "I2C CONNECTED").ok();
+        uwriteln!(serial, "I2C CONNECTED").ok();
 
         let mut oled = Sh1107g::new(i2c, self.address);
-        writeln!(serial, "DRIVER CREATED").ok();
+        uwriteln!(serial, "DRIVER CREATED").ok();
 
         match oled.init() {
-            Ok(_) => writeln!(serial, "INIT OK").ok(),
-            Err(_) => writeln!(serial, "INIT FAILED").ok(),
+            Ok(_) => uwriteln!(serial, "INIT OK").ok(),
+            Err(_) => uwriteln!(serial, "INIT FAILED").ok(),
         };
 
         Ok(oled)
