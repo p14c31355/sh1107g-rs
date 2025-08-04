@@ -106,21 +106,17 @@ where
         Ok(())
     }
 
-    pub fn write_command_list<I2C, E, W: uWrite>(
-        i2c: &mut I2C,
-        address: u8,
+    pub fn write_command_list<W: uWrite>(
+        &mut self,
         cmds: &[u8],
         serial: &mut W,
-    ) -> Result<(), E>
-    where
-        I2C: embedded_hal::i2c::ErrorType<Error = E> + embedded_hal::i2c::Write,
-    {
+    ) -> Result<(), E> {
         for (i, &cmd) in cmds.iter().enumerate() {
-            // シリアルログ出力（失敗しても無視）
+            // ログ出力
             let _ = uwriteln!(serial, "CMD[{}] = 0x{:02X}", i, cmd);
 
-            // OLED にコマンド送信
-            i2c.write(address, &[0x00, cmd])?; // 0x00 は command prefix
+            // コマンド送信
+            self.i2c.write(self.address, &[0x00, cmd])?;
         }
         Ok(())
     }
