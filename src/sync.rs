@@ -97,16 +97,33 @@ where
         let mut payload = Vec::<u8, 34>::new();
         payload.push(0x00).map_err(|_| Sh1107gError::PayloadOverflow)?;
         payload.extend_from_slice(init_cmds).map_err(|_| Sh1107gError::PayloadOverflow)?;
-        
-        // ログ出力: 長すぎるなら分割表示するなど
-        for (i, b) in payload.iter().enumerate() {
-            uwriteln!(self.serial, "CMD[{}] = 0x{:02X}", i, b).ok();
-        }
-        
+                
         self.i2c.write(self.address, &payload)
         .map_err(Sh1107gError::I2cError)?;
 
         Ok(())
+    }
+
+    fn write_command_list(
+        &mut self,
+        payload: &[u8],
+        serial: &mut impl Write,
+    ) -> Result<(), E> {
+        for (i, b) in payload.iter().enumerate() {
+            let _ = writeln!(serial, "CMD[{}] = 0x{:02X}", i, b);
+            self.i2c
+                .write(self.address, &[*b])
+                .map_err(|e| {
+                    let _ = writeln!(serial, "I2C ERROR: {:?}", e);
+                    e
+                })?;
+        }
+        Ok(())
+    }
+    
+    /// Clear display buffer
+    pub fn clear(&mut self) {
+        self.buffer.fill(0);
     }
 
     /// Rendering
