@@ -3,10 +3,11 @@
 use embedded_hal::i2c::I2c;
 
 #[cfg(feature = "sync")]
-use crate::Sh1107gError;
+use crate::error::Sh1107gError;
 
 #[cfg(feature = "sync")]
-use crate::{BuilderError, Sh1107g, Sh1107gBuilder};
+use crate::{Sh1107g, Sh1107gBuilder};
+use crate::error::BuilderError;
 
 #[cfg(feature = "sync")]
 use core::result::Result;
