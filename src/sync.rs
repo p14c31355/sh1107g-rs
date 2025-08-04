@@ -42,38 +42,69 @@ impl<I2C, E> Sh1107g<I2C>
 where
     I2C: embedded_hal::i2c::I2c<Error = E>,
 {
-    // ... (既存のnew関数など)
-
     // コマンドを単独で送信するヘルパー関数
     fn send_cmd(&mut self, cmd: u8) -> Result<(), E> {
         let payload = [0x80, cmd]; // コントロールバイト0x80を付加
         self.i2c.write(self.address, &payload)
     }
 
-    // コマンドと引数をセットで送信するヘルパー関数
-    fn send_cmdandarg(&mut self, cmd: u8, arg: u8) -> Result<(), E> {
-        let payload = [0x80, cmd, 0x80, arg]; // コントロールバイト0x80を各コマンドの前に付加
+    // 複数のコマンドをセットで送信するヘルパー関数
+    // データシートに従い、1つのI2Cトランザクションで送信
+    fn send_cmds(&mut self, cmds: &[u8]) -> Result<(), E> {
+        // コントロールバイト0x80 + コマンドバイト群
+        let mut payload = heapless::Vec::<u8, 20>::new();
+        payload.push(0x80).unwrap();
+        payload.extend_from_slice(cmds).unwrap();
         self.i2c.write(self.address, &payload)
     }
 
-    /// Init display
+    /// Init display (データシート準拠)
     pub fn init(&mut self) -> Result<(), E> {
-        self.send_cmd(0xAE)?;        // Display OFF
-        self.send_cmdandarg(0xD5, 0x51)?; // Set Display Clock Div
-        self.send_cmdandarg(0xA8, 0x7F)?; // Set Multiplex Ratio
-        self.send_cmdandarg(0xD3, 0x60)?; // Display Offset
-        self.send_cmd(0x40)?;        // Display Start Line
-        self.send_cmdandarg(0xAD, 0x8B)?; // Charge Pump On
-        self.send_cmd(0xA1)?;        // Segment Remap (re-mapped)
-        self.send_cmd(0xC8)?;        // COM Output Scan Direction (re-mapped)
-        self.send_cmdandarg(0xDA, 0x12)?; // COM Pins Hardware Configuration
-        self.send_cmdandarg(0x81, 0x2F)?; // Contrast Control
-        self.send_cmdandarg(0xD9, 0x22)?; // Pre-charge Period
-        self.send_cmdandarg(0xDB, 0x35)?; // VCOMH Deselect Level
-        self.send_cmd(0xA4)?;        // Entire Display On
-        self.send_cmd(0xA6)?;        // Normal Display
-        self.send_cmdandarg(0x20, 0x02)?; // Memory Addressing Mode (Page)
-        self.send_cmd(0xAF)?;        // Display ON
+        // 1. ディスプレイをオフにする
+        self.send_cmd(0xAE)?;
+
+        // 2. Display Clock Divide Ratio / Oscillator Frequency
+        self.send_cmds(&[0xD5, 0x51])?; 
+
+        // 3. Multiplex Ratio (128行に対応)
+        self.send_cmds(&[0xA8, 0x7F])?; 
+
+        // 4. Display Offset
+        self.send_cmds(&[0xD3, 0x60])?; 
+
+        // 5. Display Start Line
+        self.send_cmd(0x40)?;
+
+        // 6. Charge Pump
+        self.send_cmds(&[0xAD, 0x8B])?;
+        
+        // 7. Memory Addressing Mode (Page Addressing Mode)
+        self.send_cmds(&[0x20, 0x02])?;
+
+        // 8. Segment Remap と COM Output Scan Direction
+        self.send_cmd(0xA1)?;
+        self.send_cmd(0xC8)?;
+        
+        // 9. COM Pins Hardware Configuration
+        self.send_cmds(&[0xDA, 0x12])?;
+
+        // 10. Contrast Control
+        self.send_cmds(&[0x81, 0x2F])?;
+
+        // 11. Pre-charge Period
+        self.send_cmds(&[0xD9, 0x22])?;
+        
+        // 12. VCOMH Deselect Level
+        self.send_cmds(&[0xDB, 0x35])?;
+
+        // 13. Entire Display On / Off
+        self.send_cmd(0xA4)?;
+
+        // 14. Normal / Inverse Display
+        self.send_cmd(0xA6)?; 
+        
+        // 15. ディスプレイをオンにする
+        self.send_cmd(0xAF)?;
 
         Ok(())
     }
