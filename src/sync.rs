@@ -19,6 +19,9 @@ use core::result::Result::Ok;
 #[cfg(feature = "sync")]
 use ufmt::uwriteln;
 
+#[cfg(feature = "sync")]
+use core::fmt::Write;
+
 // Sh1107g instance ( builded by builder ) call init and flush
 #[cfg(feature = "sync")]
 impl<I2C, E> Sh1107gBuilder<I2C>
@@ -94,6 +97,12 @@ where
         let mut payload = Vec::<u8, 34>::new();
         payload.push(0x00).map_err(|_| Sh1107gError::PayloadOverflow)?;
         payload.extend_from_slice(init_cmds).map_err(|_| Sh1107gError::PayloadOverflow)?;
+        
+        // ログ出力: 長すぎるなら分割表示するなど
+        for (i, b) in payload.iter().enumerate() {
+            uwriteln!(self.serial, "CMD[{}] = 0x{:02X}", i, b).ok();
+        }
+        
         self.i2c.write(self.address, &payload)
         .map_err(Sh1107gError::I2cError)?;
 
