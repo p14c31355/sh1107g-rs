@@ -10,39 +10,35 @@ use core::result::Result;
 #[cfg(feature = "sync")]
 use core::result::Result::Ok;
 
-#[cfg(feature = "sync")]
-use ufmt::uwriteln;
-#[cfg(feature = "sync")]
-use ufmt_write::uWrite;
-
 
 // Sh1107g instance ( builded by builder ) call init and flush
 #[cfg(feature = "sync")]
 impl<I2C, E> Sh1107gBuilder<I2C>
 where
-    I2C: core::fmt::Write<Error = E>,
+    I2C: I2c<Error = E>,
 {
     pub fn build(
         mut self,
-        serial: &mut dyn uWrite<Error = core::fmt::Error>,
+        serial: &mut dyn core::fmt::Write, // ← ここが fmt::Write
     ) -> Result<Sh1107g<I2C>, BuilderError> {
-        uwriteln!(serial, "BUILD START").ok();
+        writeln!(serial, "BUILD START").ok();
 
         let i2c = self.i2c.ok_or(BuilderError::NoI2cConnected)?;
-        uwriteln!(serial, "I2C CONNECTED").ok();
+        writeln!(serial, "I2C CONNECTED").ok();
 
         let mut oled = Sh1107g::new(i2c, self.address);
-        uwriteln!(serial, "DRIVER CREATED").ok();
+        writeln!(serial, "DRIVER CREATED").ok();
 
-        // 初期化（ここで止まることが多い）
         match oled.init() {
-            Ok(_) => uwriteln!(serial, "INIT OK").ok(),
-            Err(_) => uwriteln!(serial, "INIT FAILED").ok(),
-        }
+        Ok(_) => writeln!(serial, "INIT OK").ok(),
+        Err(_) => writeln!(serial, "INIT FAILED").ok(),
+    };
+
 
         Ok(oled)
     }
 }
+
 
 
 // let size = self.size.ok_or(BuilderError::NoDisplaySizeDefined)?; // サイズが必須の場合
