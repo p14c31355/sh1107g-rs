@@ -3,6 +3,9 @@
 use embedded_hal::i2c::I2c;
 
 #[cfg(feature = "sync")]
+use crate::Sh1107gError;
+
+#[cfg(feature = "sync")]
 use crate::{BuilderError, Sh1107g, Sh1107gBuilder};
 
 #[cfg(feature = "sync")]
@@ -14,16 +17,15 @@ use core::result::Result::Ok;
 #[cfg(feature = "sync")]
 impl<I2C, E> Sh1107gBuilder<I2C>
 where
-    I2C: I2c<Error = E>,
-    E: core::fmt::Debug + From<()>, // From<()> を再度追加
+    I2C: embedded_hal::i2c::I2c<Error = E>,
+    E: core::fmt::Debug,
 {
     pub fn build(
-        mut self,
+        self,
         serial: &mut dyn core::fmt::Write,
-    ) -> Result<Sh1107g<I2C>, BuilderError> {
-        writeln!(serial, "BUILD START").ok();
+    ) -> Result<Sh1107g<I2C>, Sh1107gError<E>> {
 
-        let i2c = self.i2c.ok_or(BuilderError::NoI2cConnected)?;
+        let i2c = self.i2c.ok_or(Sh1107gError::Builder(BuilderError::NoI2cConnected))?;
         writeln!(serial, "I2C CONNECTED").ok();
 
         let mut oled = Sh1107g::new(i2c, self.address);
@@ -36,7 +38,7 @@ where
             Err(_) => writeln!(serial, "INIT FAILED").ok(),
         };
 
-        Ok(oled)
+        Ok(Sh1107g::new(i2c, self.address))
     }
 }
 
@@ -100,7 +102,7 @@ where
     }
 
     /// Rendering
-    pub fn flush(&mut self) -> Result<(), E> {
+    pub fn flush(&mut self) -> Result<(), Sh1107gError<E>> {
     use crate::{DISPLAY_HEIGHT, DISPLAY_WIDTH};
     use heapless::Vec;
 
@@ -117,13 +119,12 @@ where
         let page_data = &self.buffer[start_index..end_index];
 
         for chunk in page_data.chunks(64) {
-            let mut payload = Vec::<u8, {1 + 64}>::new();
-            payload.push(0x40).map_err(|_| panic!("payload overflow"))?;
-            payload.extend_from_slice(chunk).map_err(|_| panic!("payload overflow"))?;
-            self.i2c.write(self.address, &payload)?;
+        let mut payload = heapless::Vec::<u8, {1 + 64}>::new();
+        payload.push(0x40).map_err(|_| Sh1107gError::PayloadOverflow)?;
+        payload.extend_from_slice(chunk).map_err(|_| Sh1107gError::PayloadOverflow)?;
+        self.i2c.write(self.address, &payload).map_err(Sh1107gError::I2cError)?;
         }
     }
-    Ok(())
-}
-
-}
+        Ok(())
+    }
+    }
