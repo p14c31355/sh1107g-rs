@@ -25,6 +25,7 @@ impl<I2C, E> Sh1107gBuilder<I2C>
 where
     I2C: embedded_hal::i2c::I2c<Error = E>,
     E: core::fmt::Debug,
+    Sh1107gError<E>: From<E>,
 {
     pub fn build(
         self,
