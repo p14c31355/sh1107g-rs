@@ -69,31 +69,31 @@ where
     /// Init display (U8g2ライブラリ準拠)
     pub fn init(&mut self) -> Result<(), Sh1107gError<E>> {
         use heapless::Vec;
+
+        // デバッグ：init() 開始ログ
+        // uwriteln!(serial, "init() start").ok(); // serial を受け取るようにするなら
+
         let init_cmds: &[u8] = &[
-            0xAE,           // Display Off
-            0x40,           // Display Start Line
-            0x20, 0x02,     // Memory Addressing Mode
-            0x81, 0x80,     // Contrast Control
-            0xA0,           // Segment Remap (通常表示)
-            0xA4,           // Entire Display On
-            0xA6,           // Normal Display
-            0xA8, 0x7F,     // Multiplex Ratio
-            0xD3, 0x60,     // Display Offset
-            0xD5, 0x51,     // Display Clock Divide Ratio
-            0xC0,           // COM Output Scan Direction (通常表示)
-            0xD9, 0x22,     // Pre-charge Period
-            0xDA, 0x12,     // COM Pins Hardware Configuration
-            0xDB, 0x35,     // VCOMH Deselect Level
-            0xAD, 0x8B,     // Charge Pump
-            0xAF,           // Display On
+            0xAE, 0x40, 0x20, 0x02, 0x81, 0x80, 0xA0, 0xA4,
+            0xA6, 0xA8, 0x7F, 0xD3, 0x60, 0xD5, 0x51, 0xC0,
+            0xD9, 0x22, 0xDA, 0x12, 0xDB, 0x35, 0xAD, 0x8B,
+            0xAF,
         ];
 
-        let mut payload = Vec::<u8, 34>::new();
-        payload.push(0x00).map_err(|_| Sh1107gError::PayloadOverflow)?;
-        payload.extend_from_slice(init_cmds).map_err(|_| Sh1107gError::PayloadOverflow)?;
-                
-        self.i2c.write(self.address, &payload)
-        .map_err(Sh1107gError::I2cError)?;
+        // Vecのサイズを増やしてみる（保険）
+        let mut payload = Vec::<u8, 40>::new(); // ← 増やしてみる！
+
+        payload.push(0x00).map_err(|_| {
+            // uwriteln!(serial, "Payload push failed!").ok();
+            Sh1107gError::PayloadOverflow
+        })?;
+
+        payload.extend_from_slice(init_cmds).map_err(|_| {
+            // uwriteln!(serial, "extend_from_slice failed!").ok();
+            Sh1107gError::PayloadOverflow
+        })?;
+
+        self.i2c.write(self.address, &payload).map_err(Sh1107gError::I2cError)?;
 
         Ok(())
     }
