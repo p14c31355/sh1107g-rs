@@ -38,8 +38,7 @@ where
         let mut oled = Sh1107g::new(i2c, self.address);
         uwriteln!(serial, "DRIVER CREATED").ok();
 
-        // init メソッドが返すエラー型に合わせて、map_errで変換する
-        oled.init().map_err(|e| Sh1107gError::I2cError(e))?;
+        oled.init()?;
 
         uwriteln!(serial, "INIT OK").ok();
         Ok(oled)
@@ -70,7 +69,7 @@ where
     }
 
     /// Init display (U8g2ライブラリ準拠)
-    pub fn init(&mut self) -> Result<(), E> {
+    pub fn init(&mut self) -> Result<(), Sh1107gError<E>> {
         use heapless::Vec;
         let init_cmds: &[u8] = &[
             0xAE,           // Display Off
@@ -92,9 +91,10 @@ where
         ];
 
         let mut payload = Vec::<u8, 34>::new();
-        payload.push(0x00).map_err(|_| panic!("payload overflow"))?;
-        payload.extend_from_slice(init_cmds).map_err(|_| panic!("payload overflow"))?;
-        self.i2c.write(self.address, &payload)?;
+        payload.push(0x00).map_err(|_| Sh1107gError::PayloadOverflow)?;
+        payload.extend_from_slice(init_cmds).map_err(|_| Sh1107gError::PayloadOverflow)?;
+        self.i2c.write(self.address, &payload)
+        .map_err(Sh1107gError::I2cError)?;
 
         Ok(())
     }
