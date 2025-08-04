@@ -32,13 +32,6 @@ pub enum AppError<E> where E: embedded_hal::i2c::Error {
     // 必要に応じて他のエラー型を追加
 }
 
-// arduino_hal::i2c::Error から AppError への変換
-impl<E> From<E> for AppError<E> where E: embedded_hal::i2c::Error {
-    fn from(e: E) -> Self {
-        AppError::I2cError(e)
-    }
-}
-
 // `E: From<()>` の要件を満たすために From<()> を実装
 impl<E> From<()> for AppError<E>
 where
