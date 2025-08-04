@@ -4,17 +4,13 @@
 use embedded_hal::i2c::I2c;
 
 #[cfg(feature = "sync")]
-use crate::error::Sh1107gError;
+use crate::error::{Sh1107gError, BuilderError};
 
 #[cfg(feature = "sync")]
 use crate::{Sh1107g, Sh1107gBuilder};
-#[cfg(feature = "sync")]
-use crate::error::BuilderError;
 
 #[cfg(feature = "sync")]
-use core::result::Result;
-#[cfg(feature = "sync")]
-use core::result::Result::Ok;
+use core::result::{Result, Result::Ok};
 
 #[cfg(feature = "sync")]
 use ufmt::uwriteln;
