@@ -1,5 +1,4 @@
 #![no_std]
-extern crate alloc;
 /// SH1107G I2C OLED driver
 pub mod cmds;
 pub mod error;
@@ -23,6 +22,8 @@ use core::result::Result;
 use core::option::Option::{self, Some, None};
 use core::result::Result::Ok;
 use core::iter::IntoIterator;
+
+use heapless::boxed::Box;
 
 /*
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

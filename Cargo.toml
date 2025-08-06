@@ -13,14 +13,11 @@ readme = "README.md"
 
 [dependencies]
 embedded-hal = { version = "1.0.0", optional = true }
-heapless = { version = "0.8", features = ["ufmt"] }
+heapless = { version = "0.8", features = ["boxed"] }
 embedded-graphics = { version = "0.8.1", default-features = false }
 embedded-graphics-core = "0.4.0"
 
 embedded-hal-async = { version = "1.0.0", optional = true }
-ufmt = "0.2.0"
-ufmt-write = "0.1.0"
-ufmt-macros = "0.3.0"
 
 dvcdbg = { path = "../dvcdbg", optional = true }
 

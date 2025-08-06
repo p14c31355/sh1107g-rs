@@ -1,12 +1,10 @@
-use ufmt::derive::uDebug;
-
-#[derive(Debug, uDebug)]
+#[derive(Debug)]
 pub enum BuilderError {
     NoI2cConnected,
     InitFailed,
 }
 
-#[derive(Debug, uDebug)]
+#[derive(Debug)]
 pub enum Sh1107gError<I2cE> {
     Builder(BuilderError),
     PayloadOverflow,

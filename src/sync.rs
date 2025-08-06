@@ -18,10 +18,7 @@ where
     E: core::fmt::Debug,
     Sh1107gError<E>: From<E>,
 {
-    pub fn build(self) -> Result<Sh1107g<I2C>, Sh1107gError<E>>
-    where
-    E: ufmt::uDebug,
-    {
+    pub fn build(self) -> Result<Sh1107g<I2C>, Sh1107gError<E>>{
 
         let i2c = self.i2c.ok_or(Sh1107gError::Builder(BuilderError::NoI2cConnected))?;
 
