@@ -137,6 +137,9 @@ dependencies = [
  "embedded-hal",
  "embedded-hal-async",
  "heapless",
+ "ufmt",
+ "ufmt-macros",
+ "ufmt-write",
 ]
 
 [[package]]

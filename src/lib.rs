@@ -23,7 +23,6 @@ use core::option::Option::{self, Some, None};
 use core::result::Result::Ok;
 use core::iter::IntoIterator;
 
-use heapless::
 
 /*
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -51,7 +50,7 @@ pub struct Sh1107g<I2C> {
     pub(crate) buffer: [u8; BUFFER_SIZE], // Internal buffer
 
     #[cfg(feature = "debug_log")]
-    pub(crate) logger: Option<Box<dyn Logger, heapless::consts::U65>>,
+    pub(crate) logger: L<dvcdbg::logger::NoopLogger>,
     // Configure in builder to Sh1107g struct
 }
 
@@ -89,7 +88,7 @@ pub struct Sh1107gBuilder<I2C> {
     i2c: Option<I2C>,
     address: u8,      // Configure default address or choice Option type
     #[cfg(feature = "debug_log")]
-    pub(crate) logger: Option<Box<dyn Logger, heapless::consts::U65>>,
+    pub(crate) logger: Option<L>,
     // If you can add more settings value rotation: DisplayRotation,etc...
 }
 

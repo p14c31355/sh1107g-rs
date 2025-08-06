@@ -81,6 +81,7 @@ where
 
     /// Init display (U8g2ライブラリ準拠)
     pub fn init(&mut self) -> Result<(), Sh1107gError<E>>{
+        use dvcdbg::cmd_debug::log_init_sequence;
         let init_cmds: &[u8] = &[
             0xAE, 0x40, 0x20, 0x02, 0x81, 0x80, 0xA0, 0xA4,
             0xA6, 0xA8, 0x7F, 0xD3, 0x60, 0xD5, 0x51, 0xC0,
@@ -103,6 +104,9 @@ where
         self.i2c.write(self.address, &payload).map_err(|e| {
             Sh1107gError::I2cError(e)
         })?;
+
+        #[cfg(feature = "debug_log")]
+        log_init_sequence(self.logger.as_mut()?);
 
         Ok(())
     }
