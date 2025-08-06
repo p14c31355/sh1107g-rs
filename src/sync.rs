@@ -59,12 +59,22 @@ where
 {
     // コマンドを単独で送信するヘルパー関数
     fn send_cmd(&mut self, cmd: u8) -> Result<(), E> {
+
+        #[cfg(feature = "debug_log")]
+        if let Some(logger) = self.logger.as_mut() {
+            use heapless::String;
+            let mut msg = String::<16>::new();
+            let _ = ufmt::uwrite!(&mut msg, "CMD = 0x{:02X}", cmd);
+            logger.log(&msg);
+        }
+
         let payload = [0x80, cmd]; // コントロールバイト0x80を付加
         self.i2c.write(self.address, &payload)
     }
 
     // 複数のコマンドをセットで送信するヘルパー関数
     // send_cmds の push エラーを独自に変換
+    /*
     fn send_cmds(&mut self, cmds: &[u8]) -> Result<(), Sh1107gError<E>> {
         use heapless::Vec;
         let mut payload = Vec::<u8, 20>::new();
@@ -72,6 +82,7 @@ where
         payload.extend_from_slice(cmds).map_err(|_| Sh1107gError::PayloadOverflow)?;
         self.i2c.write(self.address, &payload).map_err(Sh1107gError::I2cError)
     }
+    */
 
     /// Init display (U8g2ライブラリ準拠)
     pub fn init(&mut self) -> Result<(), Sh1107gError<E>>
@@ -88,31 +99,31 @@ where
 
         // 1. payloadの作成
         let mut payload = heapless::Vec::<u8, 40>::new(); // ←サイズ保険
-        uwriteln!(serial, "init() start").ok();
+        // uwriteln!(serial, "init() start").ok();
 
         // 2. push(0x00)
         payload.push(0x00).map_err(|_| {
-            uwriteln!(serial, "push failed").ok();
+            // uwriteln!(serial, "push failed").ok();
             Sh1107gError::PayloadOverflow
         })?;
 
-        uwriteln!(serial, "push OK").ok();
+        // uwriteln!(serial, "push OK").ok();
 
         // 3. extend_from_slice
         payload.extend_from_slice(init_cmds).map_err(|_| {
-            uwriteln!(serial, "extend_from_slice failed").ok();
+            // uwriteln!(serial, "extend_from_slice failed").ok();
             Sh1107gError::PayloadOverflow
         })?;
 
-        uwriteln!(serial, "extend OK").ok();
+        // uwriteln!(serial, "extend OK").ok();
 
         // 4. I2C write
         self.i2c.write(self.address, &payload).map_err(|e| {
-            uwriteln!(serial, "i2c.write failed").ok();
+            // uwriteln!(serial, "i2c.write failed").ok();
             Sh1107gError::I2cError(e)
         })?;
 
-        uwriteln!(serial, "write OK").ok();
+        // uwriteln!(serial, "write OK").ok();
 
         Ok(())
     }

@@ -9,6 +9,9 @@ pub mod sync;
 #[cfg(feature = "async_")]
 pub mod async_;
 
+#[cfg(feature = "debug_log")]
+use dvcdbg::logger::Logger;
+
 use embedded_graphics_core::{
     draw_target::DrawTarget,
     pixelcolor::BinaryColor,
@@ -44,6 +47,9 @@ pub struct Sh1107g<I2C> {
     pub(crate) i2c: I2C,
     pub(crate) address: u8,
     pub(crate) buffer: [u8; BUFFER_SIZE], // Internal buffer
+    
+    #[cfg(feature = "debug_log")]
+    pub(crate) logger: Option<&'static mut dyn Logger>,
     // Configure in builder to Sh1107g struct
 }
 
@@ -62,6 +68,17 @@ impl <I2C> Sh1107g<I2C> {
     pub fn clear_buffer(&mut self) {
         self.buffer.iter_mut().for_each(|b| *b = 0x00);
     }
+    
+    #[cfg(feature = "debug_log")]
+    pub fn new_with_logger(i2c: I2C, address: u8, logger: &'static mut dyn Logger) -> Self {
+        Self {
+            i2c,
+            address,
+            buffer: [0; BUFFER_SIZE],
+            logger: Some(logger),
+        }
+    }
+
 }
 // Builder struct
 pub struct Sh1107gBuilder<I2C> {
