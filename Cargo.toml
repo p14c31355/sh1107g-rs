@@ -22,6 +22,7 @@ ufmt = "0.2.0"
 ufmt-write = "0.1.0"
 ufmt-macros = "0.3.0"
 
+[dev-dependencies]
 dvcdbg = { path = "../dvcdbg" }
 
 [features]
