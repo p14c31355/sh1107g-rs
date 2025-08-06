@@ -1,5 +1,5 @@
 // src/sync.rs
-/// sync
+//! sync
 
 #[cfg(feature = "sync")]
 use crate::error::{Sh1107gError, BuilderError};
@@ -39,7 +39,6 @@ where
 
     if let Err(e) = oled.init() {
         return Err(Sh1107gError::Builder(BuilderError::InitFailed));
-    } else {
     }
         Ok(oled)
     }

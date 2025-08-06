@@ -9,9 +9,6 @@ pub mod sync;
 #[cfg(feature = "async_")]
 pub mod async_;
 
-#[cfg(feature = "debug_log")]
-use dvcdbg::logger::Logger;
-
 use embedded_graphics_core::{
     draw_target::DrawTarget,
     pixelcolor::BinaryColor,
@@ -45,15 +42,14 @@ impl Default for DisplayRotation {
 use embedded_graphics_core::geometry::{Dimensions, Point, Size};
 
 #[cfg(feature = "debug_log")]
-use dvcdbg::logger::SerialLogger;
+use dvcdbg::logger::{Logger, SerialLogger};
 #[cfg(not(feature = "debug_log"))]
 use dvcdbg::logger::NoopLogger;
 
 #[cfg(feature = "debug_log")]
-pub type DefaultLogger = SerialLogger<'static, impl core::fmt::Write>;
+pub type DefaultLogger = SerialLogger;
 #[cfg(not(feature = "debug_log"))]
 pub type DefaultLogger = NoopLogger;
-
 
 pub struct Sh1107g<I2C, L = DefaultLogger> {
     pub(crate) i2c: I2C,
@@ -103,13 +99,12 @@ pub struct Sh1107gBuilder<I2C, L: Logger = DefaultLogger> {
 impl<I2C, L: Logger> Sh1107gBuilder<I2C, L> {
     /// Make new builder instance
     /// Designation default I2C address
-    pub fn new(i2c: I2C) -> Self {
+    pub fn new() -> Self {
         Self {
             i2c: None,
             address: 0x3C, // default
             // size: None,
             // rotation: DisplayRotation::default(),
-            #[cfg(feature = "debug_log")]
             logger: None,
         }
     }
@@ -126,10 +121,17 @@ impl<I2C, L: Logger> Sh1107gBuilder<I2C, L> {
         self
     }
 
-    #[cfg(feature = "debug_log")]
-    pub fn with_logger(mut self, logger: Box<dyn Logger, heapless::consts::U65>) -> Self {
+    pub fn with_logger(mut self, logger: L) -> Self {
         self.logger = Some(logger);
         self
+    }
+
+    pub fn build(self) -> Sh1107g<I2C, L> {
+        Sh1107g::new(
+            self.i2c.expect("I2C must be set"),
+            self.address,
+            self.logger.unwrap_or_else(|| DefaultLogger::default()),
+        )
     }
     // If you need other method, add other setting method, example: size,rotate,etc...
 }
