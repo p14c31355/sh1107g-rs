@@ -10,9 +10,6 @@ use crate::{Sh1107g, Sh1107gBuilder};
 #[cfg(feature = "sync")]
 use core::result::{Result, Result::Ok};
 
-#[cfg(feature = "sync")]
-use ufmt::uWrite;
-
 // Sh1107g instance ( builded by builder ) call init and flush
 #[cfg(feature = "sync")]
 impl<I2C, E> Sh1107gBuilder<I2C>
@@ -21,12 +18,8 @@ where
     E: core::fmt::Debug,
     Sh1107gError<E>: From<E>,
 {
-    pub fn build(
-        self,
-        serial: &mut dyn ufmt::uWrite<Error = core::convert::Infallible>,
-    ) -> Result<Sh1107g<I2C>, Sh1107gError<E>>
+    pub fn build(self) -> Result<Sh1107g<I2C>, Sh1107gError<E>>
     where
-    I2C: uWrite<Error = E>,
     E: ufmt::uDebug,
     {
 
@@ -92,7 +85,6 @@ where
     /// Init display (U8g2ライブラリ準拠)
     pub fn init(&mut self) -> Result<(), Sh1107gError<E>>
     where
-    I2C: uWrite<Error = E>,
     E: ufmt::uDebug,
     {
         let init_cmds: &[u8] = &[
@@ -118,21 +110,6 @@ where
             Sh1107gError::I2cError(e)
         })?;
 
-        Ok(())
-    }
-
-    pub fn write_command_list<W: uWrite>(
-        &mut self,
-        cmds: &[u8],
-        serial: &mut W,
-    ) -> Result<(), E> {
-        for (i, &cmd) in cmds.iter().enumerate() {
-            // ログ出力
-            // let _ = uwriteln!(serial, "CMD[{}] = 0x{:02X}", i, cmd);
-
-            // コマンド送信
-            self.i2c.write(self.address, &[0x00, cmd])?;
-        }
         Ok(())
     }
 
