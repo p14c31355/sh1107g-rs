@@ -11,9 +11,6 @@ use crate::{Sh1107g, Sh1107gBuilder};
 use core::result::{Result, Result::Ok};
 
 #[cfg(feature = "sync")]
-use ufmt::uwriteln;
-
-#[cfg(feature = "sync")]
 use ufmt::uWrite;
 
 // Sh1107g instance ( builded by builder ) call init and flush
@@ -32,24 +29,27 @@ where
     I2C: uWrite<Error = E>,
     E: ufmt::uDebug,
     {
-        uwriteln!(serial, "BUILD START").ok();
 
         let i2c = self.i2c.ok_or(Sh1107gError::Builder(BuilderError::NoI2cConnected))?;
-        uwriteln!(serial, "I2C CONNECTED").ok();
 
-        #[cfg(feature = "debug_log")]
-        let mut oled = match self.logger {
-            Some(logger) => Sh1107g::new_with_logger(i2c, self.address, logger),
-            None => Sh1107g::new(i2c, self.address),
+        let mut oled = {
+            #[cfg(feature = "debug_log")]
+            {
+                match self.logger {
+                    Some(logger) => Sh1107g::new_with_logger(i2c, self.address, logger),
+                    None => Sh1107g::new(i2c, self.address),
+                }
+            }
+
+            #[cfg(not(feature = "debug_log"))]
+            {
+                Sh1107g::new(i2c, self.address)
+            }
         };
 
-        uwriteln!(serial, "DRIVER CREATED").ok();
-
     if let Err(e) = oled.init() {
-        uwriteln!(serial, "INIT FAILED: {:?}", e).ok();
         return Err(Sh1107gError::Builder(BuilderError::InitFailed));
     } else {
-        uwriteln!(serial, "INIT OK").ok();
     }
         Ok(oled)
     }
@@ -104,31 +104,19 @@ where
 
         // 1. payloadの作成
         let mut payload = heapless::Vec::<u8, 40>::new(); // ←サイズ保険
-        // uwriteln!(serial, "init() start").ok();
 
         // 2. push(0x00)
         payload.push(0x00).map_err(|_| {
-            // uwriteln!(serial, "push failed").ok();
             Sh1107gError::PayloadOverflow
         })?;
 
-        // uwriteln!(serial, "push OK").ok();
-
-        // 3. extend_from_slice
         payload.extend_from_slice(init_cmds).map_err(|_| {
-            // uwriteln!(serial, "extend_from_slice failed").ok();
             Sh1107gError::PayloadOverflow
         })?;
 
-        // uwriteln!(serial, "extend OK").ok();
-
-        // 4. I2C write
         self.i2c.write(self.address, &payload).map_err(|e| {
-            // uwriteln!(serial, "i2c.write failed").ok();
             Sh1107gError::I2cError(e)
         })?;
-
-        // uwriteln!(serial, "write OK").ok();
 
         Ok(())
     }
@@ -140,7 +128,7 @@ where
     ) -> Result<(), E> {
         for (i, &cmd) in cmds.iter().enumerate() {
             // ログ出力
-            let _ = uwriteln!(serial, "CMD[{}] = 0x{:02X}", i, cmd);
+            // let _ = uwriteln!(serial, "CMD[{}] = 0x{:02X}", i, cmd);
 
             // コマンド送信
             self.i2c.write(self.address, &[0x00, cmd])?;
