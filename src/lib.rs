@@ -23,6 +23,8 @@ use core::option::Option::{self, Some, None};
 use core::result::Result::Ok;
 use core::iter::IntoIterator;
 
+use heapless::
+
 /*
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum DisplayRotation {
