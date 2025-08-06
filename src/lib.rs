@@ -10,13 +10,14 @@ pub mod sync;
 pub mod async_;
 
 #[cfg(feature = "debug_log")]
-use dvcdbg::logger::Logger;
+use dvcdbg::logger::{SerialLogger, Logger};
 
 use embedded_graphics_core::{
     draw_target::DrawTarget,
     pixelcolor::BinaryColor,
     Pixel,
 };
+use embedded_hal::i2c;
 use core::convert::Infallible;
 use core::result::Result;
 use core::option::Option::{self, Some, None};
@@ -95,7 +96,7 @@ pub struct Sh1107gBuilder<I2C> {
 impl<I2C> Sh1107gBuilder<I2C> {
     /// Make new builder instance
     /// Designation default I2C address
-    pub fn new() -> Self {
+    pub fn new(i2c: I2C) -> Self {
         Self {
             i2c: None,
             address: 0x3C, // default

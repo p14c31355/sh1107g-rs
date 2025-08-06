@@ -37,7 +37,12 @@ where
         let i2c = self.i2c.ok_or(Sh1107gError::Builder(BuilderError::NoI2cConnected))?;
         uwriteln!(serial, "I2C CONNECTED").ok();
 
-        let mut oled = Sh1107g::new(i2c, self.address);
+        #[cfg(feature = "debug_log")]
+        let mut oled = match self.logger {
+            Some(logger) => Sh1107g::new_with_logger(i2c, self.address, logger),
+            None => Sh1107g::new(i2c, self.address),
+        };
+
         uwriteln!(serial, "DRIVER CREATED").ok();
 
     if let Err(e) = oled.init() {
