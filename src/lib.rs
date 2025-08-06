@@ -61,6 +61,8 @@ impl <I2C> Sh1107g<I2C> {
             i2c,
             address,
             buffer: [0x00; BUFFER_SIZE], // 全てオフで初期化
+            #[cfg(feature = "debug_log")]
+            logger: None,
         }
     }
 
@@ -84,6 +86,8 @@ impl <I2C> Sh1107g<I2C> {
 pub struct Sh1107gBuilder<I2C> {
     i2c: Option<I2C>,
     address: u8,      // Configure default address or choice Option type
+    #[cfg(feature = "debug_log")]
+    pub(crate) logger: Option<&'static mut dyn Logger>,
     // If you can add more settings value rotation: DisplayRotation,etc...
 }
 
@@ -97,6 +101,8 @@ impl<I2C> Sh1107gBuilder<I2C> {
             address: 0x3C, // default
             // size: None,
             // rotation: DisplayRotation::default(),
+            #[cfg(feature = "debug_log")]
+            logger: None,
         }
     }
 
@@ -112,6 +118,11 @@ impl<I2C> Sh1107gBuilder<I2C> {
         self
     }
 
+    #[cfg(feature = "debug_log")]
+    pub fn with_logger(mut self, logger: &'static mut dyn Logger) -> Self {
+        self.logger = Some(logger);
+        self
+    }
     // If you need other method, add other setting method, example: size,rotate,etc...
 }
 
