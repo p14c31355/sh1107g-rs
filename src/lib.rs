@@ -23,8 +23,6 @@ use core::option::Option::{self, Some, None};
 use core::result::Result::Ok;
 use core::iter::IntoIterator;
 
-use heapless::boxed::Box;
-
 /*
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum DisplayRotation {
@@ -51,7 +49,7 @@ pub struct Sh1107g<I2C> {
     pub(crate) buffer: [u8; BUFFER_SIZE], // Internal buffer
     
     #[cfg(feature = "debug_log")]
-    pub(crate) logger: Option<Box<dyn Logger>>,
+    pub(crate) logger: Option<heapless::Box<dyn Logger>>,
     // Configure in builder to Sh1107g struct
 }
 

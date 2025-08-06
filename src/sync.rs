@@ -80,10 +80,7 @@ where
     */
 
     /// Init display (U8g2ライブラリ準拠)
-    pub fn init(&mut self) -> Result<(), Sh1107gError<E>>
-    where
-    E: ufmt::uDebug,
-    {
+    pub fn init(&mut self) -> Result<(), Sh1107gError<E>>{
         let init_cmds: &[u8] = &[
             0xAE, 0x40, 0x20, 0x02, 0x81, 0x80, 0xA0, 0xA4,
             0xA6, 0xA8, 0x7F, 0xD3, 0x60, 0xD5, 0x51, 0xC0,
