@@ -44,17 +44,23 @@ impl Default for DisplayRotation {
 /// common
 use embedded_graphics_core::geometry::{Dimensions, Point, Size};
 
-pub struct Sh1107g<I2C> {
+#[cfg(feature = "debug_log")]
+type DefaultLogger = dvcdbg::logger::SerialLogger;
+#[cfg(not(feature = "debug_log"))]
+type DefaultLogger = dvcdbg::logger::NoopLogger;
+
+pub struct Sh1107g<I2C, L = DefaultLogger> {
     pub(crate) i2c: I2C,
     pub(crate) address: u8,
     pub(crate) buffer: [u8; BUFFER_SIZE], // Internal buffer
-
-    #[cfg(feature = "debug_log")]
-    pub(crate) logger: L<dvcdbg::logger::NoopLogger>,
+    pub(crate) logger: L,
     // Configure in builder to Sh1107g struct
 }
 
-impl <I2C> Sh1107g<I2C> {
+impl <I2C, L> Sh1107g<I2C, L>
+where
+    L: DefaultLogger,
+ {
     // Make new driver instance & Degine function called by the builder
     // Initialise the internal buffer when called by builder
     pub fn new(i2c: I2C, address: u8) -> Self {
@@ -62,8 +68,7 @@ impl <I2C> Sh1107g<I2C> {
             i2c,
             address,
             buffer: [0x00; BUFFER_SIZE], // 全てオフで初期化
-            #[cfg(feature = "debug_log")]
-            logger: None,
+            logger: L,
         }
     }
 
