@@ -10,14 +10,13 @@ pub mod sync;
 pub mod async_;
 
 #[cfg(feature = "debug_log")]
-use dvcdbg::logger::{SerialLogger, Logger};
+use dvcdbg::logger::Logger;
 
 use embedded_graphics_core::{
     draw_target::DrawTarget,
     pixelcolor::BinaryColor,
     Pixel,
 };
-use embedded_hal::i2c;
 use core::convert::Infallible;
 use core::result::Result;
 use core::option::Option::{self, Some, None};
@@ -50,7 +49,7 @@ pub struct Sh1107g<I2C> {
     pub(crate) buffer: [u8; BUFFER_SIZE], // Internal buffer
     
     #[cfg(feature = "debug_log")]
-    pub(crate) logger: Option<&'static mut dyn Logger>,
+    pub(crate) logger: Option<&mut dyn Logger>,
     // Configure in builder to Sh1107g struct
 }
 
@@ -73,7 +72,7 @@ impl <I2C> Sh1107g<I2C> {
     }
     
     #[cfg(feature = "debug_log")]
-    pub fn new_with_logger(i2c: I2C, address: u8, logger: &'static mut dyn Logger) -> Self {
+    pub fn new_with_logger(i2c: I2C, address: u8, logger: &mut dyn Logger) -> Self {
         Self {
             i2c,
             address,
@@ -120,7 +119,7 @@ impl<I2C> Sh1107gBuilder<I2C> {
     }
 
     #[cfg(feature = "debug_log")]
-    pub fn with_logger(mut self, logger: &'static mut dyn Logger) -> Self {
+    pub fn with_logger(mut self, logger: &'a mut dyn Logger) -> Self {
         self.logger = Some(logger);
         self
     }
