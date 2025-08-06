@@ -45,9 +45,15 @@ impl Default for DisplayRotation {
 use embedded_graphics_core::geometry::{Dimensions, Point, Size};
 
 #[cfg(feature = "debug_log")]
-type DefaultLogger = dvcdbg::logger::SerialLogger;
+use dvcdbg::logger::SerialLogger;
 #[cfg(not(feature = "debug_log"))]
-type DefaultLogger = dvcdbg::logger::NoopLogger;
+use dvcdbg::logger::NoopLogger;
+
+#[cfg(feature = "debug_log")]
+pub type DefaultLogger = SerialLogger<'static, impl core::fmt::Write>;
+#[cfg(not(feature = "debug_log"))]
+pub type DefaultLogger = NoopLogger;
+
 
 pub struct Sh1107g<I2C, L = DefaultLogger> {
     pub(crate) i2c: I2C,
@@ -57,18 +63,15 @@ pub struct Sh1107g<I2C, L = DefaultLogger> {
     // Configure in builder to Sh1107g struct
 }
 
-impl <I2C, L> Sh1107g<I2C, L>
-where
-    L: DefaultLogger,
- {
+impl <I2C, L> Sh1107g<I2C, L>{
     // Make new driver instance & Degine function called by the builder
     // Initialise the internal buffer when called by builder
-    pub fn new(i2c: I2C, address: u8) -> Self {
+    pub fn new(i2c: I2C, address: u8, logger: L) -> Self {
         Self {
             i2c,
             address,
             buffer: [0x00; BUFFER_SIZE], // 全てオフで初期化
-            logger: L,
+            logger,
         }
     }
 
@@ -89,16 +92,15 @@ where
 
 }
 // Builder struct
-pub struct Sh1107gBuilder<I2C> {
+pub struct Sh1107gBuilder<I2C, L: Logger = DefaultLogger> {
     i2c: Option<I2C>,
     address: u8,      // Configure default address or choice Option type
-    #[cfg(feature = "debug_log")]
-    pub(crate) logger: Option<L>,
+    logger: Option<L>,
     // If you can add more settings value rotation: DisplayRotation,etc...
 }
 
 // Sh1107gBuilder implement block
-impl<I2C> Sh1107gBuilder<I2C> {
+impl<I2C, L: Logger> Sh1107gBuilder<I2C, L> {
     /// Make new builder instance
     /// Designation default I2C address
     pub fn new(i2c: I2C) -> Self {
