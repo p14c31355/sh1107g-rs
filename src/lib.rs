@@ -47,9 +47,9 @@ pub struct Sh1107g<I2C> {
     pub(crate) i2c: I2C,
     pub(crate) address: u8,
     pub(crate) buffer: [u8; BUFFER_SIZE], // Internal buffer
-    
+
     #[cfg(feature = "debug_log")]
-    pub(crate) logger: Option<heapless::Box<dyn Logger>>,
+    pub(crate) logger: Option<Box<dyn Logger, heapless::consts::U65>>,
     // Configure in builder to Sh1107g struct
 }
 
@@ -87,7 +87,7 @@ pub struct Sh1107gBuilder<I2C> {
     i2c: Option<I2C>,
     address: u8,      // Configure default address or choice Option type
     #[cfg(feature = "debug_log")]
-    pub(crate) logger: Option<Box<dyn Logger>>,
+    pub(crate) logger: Option<Box<dyn Logger, heapless::consts::U65>>,
     // If you can add more settings value rotation: DisplayRotation,etc...
 }
 
@@ -119,7 +119,7 @@ impl<I2C> Sh1107gBuilder<I2C> {
     }
 
     #[cfg(feature = "debug_log")]
-    pub fn with_logger(mut self, logger: Box<dyn Logger>) -> Self {
+    pub fn with_logger(mut self, logger: Box<dyn Logger, heapless::consts::U65>) -> Self {
         self.logger = Some(logger);
         self
     }
