@@ -21,6 +21,13 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1fd0f2584146f6f2ef48085050886acf353beff7305ebd1ae69500e27c67f64b"
 
 [[package]]
+name = "dvcdbg"
+version = "0.1.0"
+dependencies = [
+ "ufmt",
+]
+
+[[package]]
 name = "embedded-graphics"
 version = "0.8.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -123,6 +130,7 @@ dependencies = [
 name = "sh1107g-rs"
 version = "0.1.0"
 dependencies = [
+ "dvcdbg",
  "embedded-graphics",
  "embedded-graphics-core",
  "embedded-hal",
