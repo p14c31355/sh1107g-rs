@@ -44,8 +44,7 @@ where
         let res = self.i2c.write(self.address, &[0x80, cmd]);
         if let Some(logger) = self.logger.as_mut() {
             log_cmd(*logger, cmd);
-            // ログ用にはエラー詳細は破棄（Ok or Errだけ）
-            (*logger).log_i2c("send_cmd", res.map_err(|_| ()));
+            (*logger).log_i2c("send_cmd", res.as_ref().map(|_| ()).map_err(|_| ()));
         }
         res
     }
@@ -55,7 +54,7 @@ where
         let res = self.i2c.write(self.address, &[cmd]);
         if let Some(logger) = self.logger.as_mut() {
             log_cmd(*logger, cmd);
-            (*logger).log_i2c("write_command", res.map_err(|_| ()));
+            (*logger).log_i2c("write_command", res.as_ref().map(|_| ()).map_err(|_| ()));
         }
         res
     }
@@ -75,7 +74,7 @@ where
 
         let res = self.i2c.write(self.address, &payload);
         if let Some(logger) = self.logger.as_mut() {
-            (*logger).log_i2c("init_sequence", res.map_err(|_| ()));
+            (*logger).log_i2c("init_sequence", res.as_ref().map(|_| ()).map_err(|_| ()));
             log_init_sequence(*logger);
         }
         res.map_err(Sh1107gError::I2cError)?;
@@ -103,7 +102,7 @@ where
                 payload.extend_from_slice(chunk).map_err(|_| Sh1107gError::PayloadOverflow)?;
                 let res = self.i2c.write(self.address, &payload);
                 if let Some(logger) = self.logger.as_mut() {
-                    (*logger).log_i2c("flush_chunk", res.map_err(|_| ()));
+                    (*logger).log_i2c("flush_chunk", res.as_ref().map(|_| ()).map_err(|_| ()));
                 }
                 res.map_err(Sh1107gError::I2cError)?;
             }
