@@ -30,7 +30,7 @@ where
 
         let mut oled = Sh1107g::new(i2c, self.address, self.logger);
 
-        if let Err(_e) = oled.init().await {
+        if let Err(_e) = oled.init_async().await {
             return Err(Sh1107gError::Builder(BuilderError::InitFailed));
         }
 
