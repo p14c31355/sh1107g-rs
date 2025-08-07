@@ -1,7 +1,7 @@
 // src/sync.rs
 //! sync
 #[cfg(feature = "debug_log")]
-use dvcdbg::logger::Logger;
+use dvcdbg::logger::{log_cmd, Logger};
 
 #[cfg(feature = "sync")]
 use crate::error::{Sh1107gError, BuilderError};
@@ -59,6 +59,13 @@ where
 
         let payload = [0x80, cmd];
         self.i2c.write(self.address, &payload)
+    }
+
+    fn write_command(&mut self, cmd: u8) {
+        if let Some(logger) = self.logger.as_mut() {
+        log_cmd(logger, cmd);
+        logger.log_i2c("write_command", res);
+        }
     }
 
     pub fn init(&mut self) -> Result<(), Sh1107gError<E>>{
