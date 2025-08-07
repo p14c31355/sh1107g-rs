@@ -51,11 +51,11 @@ pub type DefaultLogger<'a, W> = SerialLogger<'a, W>;
 #[cfg(not(feature = "debug_log"))]
 pub type DefaultLogger = NoopLogger;
 
-pub struct Sh1107g<'a, I2C, L = DefaultLogger<'a, W>> {
+pub struct Sh1107g<'a, I2C, L = Logger + ?Sized> {
     pub(crate) i2c: I2C,
     pub(crate) address: u8,
     pub(crate) buffer: [u8; BUFFER_SIZE], // Internal buffer
-    pub(crate) logger: L,
+    pub(crate) logger: &'a mut L,
     // Configure in builder to Sh1107g struct
 }
 
@@ -86,26 +86,33 @@ impl <I2C, L> Sh1107g<I2C, L>{
         }
     }
 
+    pub fn build_log(self) -> Sh1107g<'static, I2C, L> {
+        Sh1107g::new(
+            self.i2c.expect("I2C must be set"),
+            self.address,
+            self.logger.unwrap_or_else(L::default),
+        )
+    }
 }
 // Builder struct
-pub struct Sh1107gBuilder<'a, I2C, L: Logger = DefaultLogger<'a, W>> {
-    i2c: Option<I2C>,
+pub struct Sh1107gBuilder<'a, I2C, L: Logger + ?Sized> {
+    i2c: I2C,
     address: u8,      // Configure default address or choice Option type
-    logger: Option<L>,
+    logger: &'a mut L,
     // If you can add more settings value rotation: DisplayRotation,etc...
 }
 
 // Sh1107gBuilder implement block
-impl<I2C, L: Logger + core::default::Default> Sh1107gBuilder<I2C, L> {
+impl<'a, I2C, L: Logger + ?Sized> Sh1107gBuilder<'a, I2C, L> {
     /// Make new builder instance
     /// Designation default I2C address
-    pub fn new() -> Self {
+    pub fn new(i2c: I2C, _address: u8, logger: &'a mut L) -> Self {
         Self {
-            i2c: None,
+            i2c,
             address: 0x3C, // default
             // size: None,
             // rotation: DisplayRotation::default(),
-            logger: None,
+            logger,
         }
     }
 
@@ -124,14 +131,6 @@ impl<I2C, L: Logger + core::default::Default> Sh1107gBuilder<I2C, L> {
     pub fn with_logger(mut self, logger: L) -> Self {
         self.logger = Some(logger);
         self
-    }
-
-    pub fn build_log(self) -> Sh1107g<I2C, L> {
-        Sh1107g::new(
-            self.i2c.expect("I2C must be set"),
-            self.address,
-            self.logger.unwrap_or_else(L::default),
-        )
     }
     // If you need other method, add other setting method, example: size,rotate,etc...
 }
