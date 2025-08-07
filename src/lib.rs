@@ -1,6 +1,5 @@
 #![no_std]
 
-/// SH1107G I2C OLED driver
 pub mod cmds;
 pub mod error;
 
@@ -40,20 +39,20 @@ pub const DISPLAY_WIDTH: u32 = 128;
 pub const DISPLAY_HEIGHT: u32 = 128;
 pub const BUFFER_SIZE: usize = (DISPLAY_WIDTH * DISPLAY_HEIGHT / 8) as usize;
 
-pub struct Sh1107g<'a, I2C, L: Logger + ?Sized> {
+// LはOptionでラップされているため、`?Sized`は不要です。
+// `Option`はジェネリック型パラメータを持つため、ライフタイム `'a` が必要になります。
+pub struct Sh1107g<'a, I2C, L> {
     pub(crate) i2c: I2C,
     pub(crate) address: u8,
     pub(crate) buffer: [u8; BUFFER_SIZE],
-    pub(crate) logger: &'a mut L,
+    pub(crate) logger: Option<&'a mut L>,
 }
 
 impl<'a, I2C, L> Sh1107g<'a, I2C, L>
 where
-    L: Logger + ?Sized,
+    L: Logger,
 {
-    // Make new driver instance & Degine function called by the builder
-    // Initialise the internal buffer when called by builder
-    pub fn new(i2c: I2C, address: u8, logger: &'a mut L) -> Self {
+    pub fn new(i2c: I2C, address: u8, logger: Option<&'a mut L>) -> Self {
         Self {
             i2c,
             address,
@@ -67,13 +66,20 @@ where
     }
 }
 
-pub struct Sh1107gBuilder<'a, I2C, L: Logger + ?Sized> {
+// L は Logger を実装する必要があるため、`where`句に追加します。
+pub struct Sh1107gBuilder<'a, I2C, L>
+where
+    L: Logger,
+{
     i2c: Option<I2C>,
     address: u8,
     logger: Option<&'a mut L>,
 }
 
-impl<'a, I2C, L: Logger + ?Sized> Sh1107gBuilder<'a, I2C, L> {
+impl<'a, I2C, L> Sh1107gBuilder<'a, I2C, L>
+where
+    L: Logger,
+{
     pub fn new(i2c: I2C, logger: &'a mut L) -> Self {
         Self {
             i2c: Some(i2c),
@@ -82,7 +88,6 @@ impl<'a, I2C, L: Logger + ?Sized> Sh1107gBuilder<'a, I2C, L> {
         }
     }
     
-    /// Configure I2C address
     pub fn with_address(mut self, address: u8) -> Self {
         self.address = address;
         self
@@ -92,60 +97,51 @@ impl<'a, I2C, L: Logger + ?Sized> Sh1107gBuilder<'a, I2C, L> {
         Sh1107g::new(
             self.i2c.expect("I2C must be set"),
             self.address,
-            self.logger.expect("Logger must be set"),
+            self.logger,
         )
     }
-    // If you need other method, add other setting method, example: size,rotate,etc...
 }
 
 impl<'a, I2C, L> Dimensions for Sh1107g<'a, I2C, L>
 where
-    L: Logger + ?Sized,
+    L: Logger,
 {
     fn bounding_box(&self) -> Rectangle {
         Rectangle::new(Point::new(0, 0), Size::new(DISPLAY_WIDTH, DISPLAY_HEIGHT))
     }
 }
 
-// DrawTarget define color dimension (monochro OLED = BinaryColor)
 impl<'a, I2C, L> DrawTarget for Sh1107g<'a, I2C, L>
 where
-    L: Logger + ?Sized,
+    L: Logger,
 {
     type Color = BinaryColor;
     type Error = Infallible;
 
-    /// ピクセルを描画する主要なメソッド
     fn draw_iter<PIXELS>(&mut self, pixels: PIXELS) -> Result<(), Self::Error>
     where
         PIXELS: IntoIterator<Item = Pixel<Self::Color>>,
     {
         for Pixel(Point { x, y }, color) in pixels {
-            // 座標がディスプレイ範囲内かチェック
             if x < 0 || x >= DISPLAY_WIDTH as i32 || y < 0 || y >= DISPLAY_HEIGHT as i32 {
-                continue; // 範囲外のピクセルはスキップ
+                continue;
             }
 
-            // ピクセル座標からバッファのインデックスとビットマスクを計算
-            // SH1107Gはページアドレッシングモードで、各バイトが縦8ピクセル
             let byte_index = (x as usize) + (y as usize / 8) * (DISPLAY_WIDTH as usize);
-            let bit_mask = 1 << (y % 8); // バイト内のビット位置
+            let bit_mask = 1 << (y % 8);
 
-            // バッファの範囲チェック（念のため）
             if byte_index >= BUFFER_SIZE {
-                continue; // バッファ範囲外もスキップ
+                continue;
             }
 
-            // 色に応じてバッファのビットをセットまたはクリア
             match color {
-                BinaryColor::On => self.buffer[byte_index] |= bit_mask,  // ピクセルをON (セット)
-                BinaryColor::Off => self.buffer[byte_index] &= !bit_mask, // ピクセルをOFF (クリア)
+                BinaryColor::On => self.buffer[byte_index] |= bit_mask,
+                BinaryColor::Off => self.buffer[byte_index] &= !bit_mask,
             }
         }
         Ok(())
     }
 
-    /// Fill in with color
     fn clear(&mut self, color: Self::Color) -> Result<(), Self::Error> {
         let fill_byte = match color {
             BinaryColor::On => 0xFF,
