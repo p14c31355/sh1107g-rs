@@ -1,7 +1,5 @@
-// src/sync.rs
-//! sync
 #[cfg(feature = "debug_log")]
-use dvcdbg::logger::{log_cmd, Logger};
+use dvcdbg::logger::{Logger, log_cmd};
 
 #[cfg(feature = "sync")]
 use crate::error::{Sh1107gError, BuilderError};
@@ -13,10 +11,8 @@ use crate::cmds::log_init_sequence;
 use crate::{Sh1107g, Sh1107gBuilder};
 
 #[cfg(feature = "sync")]
-use core::result::{Result, Result::Ok};
+use core::result::Result;
 
-// `Sh1107gBuilder` の impl ブロックのジェネリクスを修正
-// `'a` と `L` を型パラメータとして明示的に指定
 #[cfg(feature = "sync")]
 impl<'a, I2C, L, E> Sh1107gBuilder<'a, I2C, L>
 where
@@ -25,20 +21,17 @@ where
     E: core::fmt::Debug,
     Sh1107gError<E>: From<E>,
 {
-    pub fn build_logger(self) -> Result<Sh1107g<'a, I2C, L>, Sh1107gError<E>>{
+    pub fn build_logger(self) -> Result<Sh1107g<'a, I2C, L>, Sh1107gError<E>> {
         let i2c = self.i2c.ok_or(Sh1107gError::Builder(BuilderError::NoI2cConnected))?;
-
         let mut oled = Sh1107g::new(i2c, self.address, self.logger);
 
-        if let Err(_e) = oled.init() {
+        if let Err(_) = oled.init() {
             return Err(Sh1107gError::Builder(BuilderError::InitFailed));
         }
-
         Ok(oled)
     }
 }
 
-// `Sh1107g` の impl ブロックのジェネリクスを修正
 #[cfg(feature = "sync")]
 impl<'a, I2C, L, E> Sh1107g<'a, I2C, L>
 where
@@ -46,31 +39,28 @@ where
     L: Logger + 'a,
     E: core::fmt::Debug,
 {
+    /// 単一コマンド送信
     fn send_cmd(&mut self, cmd: u8) -> Result<(), E> {
-        #[cfg(feature = "debug_log")]
+        let res = self.i2c.write(self.address, &[0x80, cmd]);
         if let Some(logger) = self.logger.as_mut() {
-            use core::fmt::Write;
-            use heapless::String;
-            let mut msg = String::<16>::new();
-            let _ = write!(&mut msg, "CMD = 0x{:02X}", cmd);
-            // logger は `&mut &'a mut L` なので、二重デリファレンスして `&mut L` を取得
-            (*logger).log(&msg);
+            log_cmd(*logger, cmd);
+            (*logger).log_i2c("send_cmd", res.clone());
         }
-
-        let payload = [0x80, cmd];
-        self.i2c.write(self.address, &payload)
+        res
     }
 
-    fn write_command(&mut self, cmd: u8) {
+    /// コマンド送信（write_command用）
+    fn write_command(&mut self, cmd: u8) -> Result<(), E> {
         let res = self.i2c.write(self.address, &[cmd]);
-
         if let Some(logger) = self.logger.as_mut() {
-            log_cmd(logger, cmd);                         // トレイト境界修正が必要
-            logger.log_i2c("write_command", res.clone()); // resを複数回使うならclone
+            log_cmd(*logger, cmd);
+            (*logger).log_i2c("write_command", res.clone());
         }
+        res
     }
 
-    pub fn init(&mut self) -> Result<(), Sh1107gError<E>>{
+    /// 初期化
+    pub fn init(&mut self) -> Result<(), Sh1107gError<E>> {
         let init_cmds: &[u8] = &[
             0xAE, 0x40, 0x20, 0x02, 0x81, 0x80, 0xA0, 0xA4,
             0xA6, 0xA8, 0x7F, 0xD3, 0x60, 0xD5, 0x51, 0xC0,
@@ -79,30 +69,21 @@ where
         ];
 
         let mut payload = heapless::Vec::<u8, 40>::new();
-        payload.push(0x00).map_err(|_| {
-            Sh1107gError::PayloadOverflow
-        })?;
+        payload.push(0x00).map_err(|_| Sh1107gError::PayloadOverflow)?;
+        payload.extend_from_slice(init_cmds).map_err(|_| Sh1107gError::PayloadOverflow)?;
 
-        payload.extend_from_slice(init_cmds).map_err(|_| {
-            Sh1107gError::PayloadOverflow
-        })?;
-
-        self.i2c.write(self.address, &payload).map_err(|e| {
-            Sh1107gError::I2cError(e)
-        })?;
-
-        #[cfg(feature = "debug_log")]
+        let res = self.i2c.write(self.address, &payload);
         if let Some(logger) = self.logger.as_mut() {
-            // logger は `&mut &'a mut L` なので、二重デリファレンスして `&mut L` を取得
+            (*logger).log_i2c("init_sequence", res.clone());
             log_init_sequence(*logger);
         }
-
+        res.map_err(Sh1107gError::I2cError)?;
         Ok(())
     }
 
+    /// バッファ内容をOLEDへ送信
     pub fn flush(&mut self) -> Result<(), Sh1107gError<E>> {
         use crate::{DISPLAY_HEIGHT, DISPLAY_WIDTH};
-
         let page_count = DISPLAY_HEIGHT as usize / 8;
         let page_width = DISPLAY_WIDTH as usize;
 
@@ -119,7 +100,11 @@ where
                 let mut payload = heapless::Vec::<u8, {1 + 64}>::new();
                 payload.push(0x40).map_err(|_| Sh1107gError::PayloadOverflow)?;
                 payload.extend_from_slice(chunk).map_err(|_| Sh1107gError::PayloadOverflow)?;
-                self.i2c.write(self.address, &payload).map_err(Sh1107gError::I2cError)?;
+                let res = self.i2c.write(self.address, &payload);
+                if let Some(logger) = self.logger.as_mut() {
+                    (*logger).log_i2c("flush_chunk", res.clone());
+                }
+                res.map_err(Sh1107gError::I2cError)?;
             }
         }
         Ok(())
