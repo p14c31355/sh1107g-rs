@@ -44,7 +44,7 @@ where
         let res = self.i2c.write(self.address, &[0x80, cmd]);
         if let Some(logger) = self.logger.as_mut() {
             log_cmd(*logger, cmd);
-            (*logger).log_i2c("send_cmd", res.clone());
+            (*logger).log_i2c("send_cmd", res);
         }
         res
     }
@@ -54,7 +54,7 @@ where
         let res = self.i2c.write(self.address, &[cmd]);
         if let Some(logger) = self.logger.as_mut() {
             log_cmd(*logger, cmd);
-            (*logger).log_i2c("write_command", res.clone());
+            (*logger).log_i2c("write_command", res);
         }
         res
     }
@@ -74,7 +74,7 @@ where
 
         let res = self.i2c.write(self.address, &payload);
         if let Some(logger) = self.logger.as_mut() {
-            (*logger).log_i2c("init_sequence", res.clone());
+            (*logger).log_i2c("init_sequence", res);
             log_init_sequence(*logger);
         }
         res.map_err(Sh1107gError::I2cError)?;
@@ -102,7 +102,7 @@ where
                 payload.extend_from_slice(chunk).map_err(|_| Sh1107gError::PayloadOverflow)?;
                 let res = self.i2c.write(self.address, &payload);
                 if let Some(logger) = self.logger.as_mut() {
-                    (*logger).log_i2c("flush_chunk", res.clone());
+                    (*logger).log_i2c("flush_chunk", res);
                 }
                 res.map_err(Sh1107gError::I2cError)?;
             }
