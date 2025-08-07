@@ -62,9 +62,11 @@ where
     }
 
     fn write_command(&mut self, cmd: u8) {
+        let res = self.i2c.write(self.address, &[cmd]);
+
         if let Some(logger) = self.logger.as_mut() {
-        log_cmd(logger, cmd);
-        logger.log_i2c("write_command", res);
+            log_cmd(logger, cmd);                         // トレイト境界修正が必要
+            logger.log_i2c("write_command", res.clone()); // resを複数回使うならclone
         }
     }
 
