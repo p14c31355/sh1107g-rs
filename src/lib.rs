@@ -51,7 +51,7 @@ pub type DefaultLogger<'a, W> = SerialLogger<'a, W>;
 #[cfg(not(feature = "debug_log"))]
 pub type DefaultLogger = NoopLogger;
 
-pub struct Sh1107g<I2C, L = DefaultLogger<W>> {
+pub struct Sh1107g<'a, I2C, L = DefaultLogger<'a, W>> {
     pub(crate) i2c: I2C,
     pub(crate) address: u8,
     pub(crate) buffer: [u8; BUFFER_SIZE], // Internal buffer
@@ -82,13 +82,13 @@ impl <I2C, L> Sh1107g<I2C, L>{
             i2c,
             address,
             buffer: [0; BUFFER_SIZE],
-            logger: logger,
+            logger,
         }
     }
 
 }
 // Builder struct
-pub struct Sh1107gBuilder<I2C, L: Logger = DefaultLogger<W>> {
+pub struct Sh1107gBuilder<'a, I2C, L: Logger = DefaultLogger<'a, W>> {
     i2c: Option<I2C>,
     address: u8,      // Configure default address or choice Option type
     logger: Option<L>,
