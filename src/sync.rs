@@ -1,5 +1,7 @@
 // src/sync.rs
 //! sync
+#[cfg(feature = "debug_log")]
+use dvcdbg::logger::Logger;
 
 #[cfg(feature = "sync")]
 use crate::error::{Sh1107gError, BuilderError};
@@ -15,13 +17,13 @@ use core::result::{Result, Result::Ok};
 
 // Sh1107g instance ( builded by builder ) call init and flush
 #[cfg(feature = "sync")]
-impl<I2C, E> Sh1107gBuilder<I2C>
+impl<I2C, E> Sh1107gBuilder<'a, I2C, L>
 where
     I2C: embedded_hal::i2c::I2c<Error = E>,
     E: core::fmt::Debug,
     Sh1107gError<E>: From<E>,
 {
-    pub fn build(self) -> Result<Sh1107g<I2C>, Sh1107gError<E>>{
+    pub fn build_logger(self) -> Result<Sh1107g<'static, I2C, L>, Sh1107gError<E>>{
 
         let i2c = self.i2c.ok_or(Sh1107gError::Builder(BuilderError::NoI2cConnected))?;
 
@@ -29,7 +31,7 @@ where
             #[cfg(feature = "debug_log")]
             {
                 match self.logger {
-                    Some(logger) => Sh1107g::new_with_logger(i2c, self.address, logger),
+                    Some(logger) => Sh1107g::new(i2c, self.address, logger),
                     None => Sh1107g::new(i2c, self.address, self.logger),
                 }
             }
@@ -49,7 +51,7 @@ where
 
 // Sh1107g impl block
 #[cfg(feature = "sync")]
-impl<I2C, E> Sh1107g<I2C>
+impl<'a, I2C, L: Logger + ?Sized, E> Sh1107g<'a, I2C, L>
 where
     I2C: embedded_hal::i2c::I2c<Error = E>,
     E: core::fmt::Debug,

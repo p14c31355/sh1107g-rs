@@ -21,7 +21,7 @@ use embedded_graphics_core::{
 use core::{
     convert::Infallible,
     result::Result,
-    option::Option::{self, Some, None},
+    option::Option::{self, Some},
 };
 
 #[cfg(feature = "debug_log")]
@@ -33,6 +33,8 @@ use dvcdbg::logger::NoopLogger;
 pub type DefaultLogger<'a, W> = SerialLogger<'a, W>;
 #[cfg(not(feature = "debug_log"))]
 pub type DefaultLogger = NoopLogger;
+
+use crate::error::BuilderError;
 
 pub const DISPLAY_WIDTH: u32 = 128;
 pub const DISPLAY_HEIGHT: u32 = 128;
