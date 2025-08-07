@@ -30,13 +30,13 @@ where
             {
                 match self.logger {
                     Some(logger) => Sh1107g::new_with_logger(i2c, self.address, logger),
-                    None => Sh1107g::new(i2c, self.address, logger),
+                    None => Sh1107g::new(i2c, self.address, self.logger),
                 }
             }
 
             #[cfg(not(feature = "debug_log"))]
             {
-                Sh1107g::new(i2c, self.address, logger)
+                Sh1107g::new(i2c, self.address, self.logger)
             }
         };
 

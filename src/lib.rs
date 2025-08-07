@@ -51,7 +51,7 @@ pub type DefaultLogger<'a, W> = SerialLogger<'a, W>;
 #[cfg(not(feature = "debug_log"))]
 pub type DefaultLogger = NoopLogger;
 
-pub struct Sh1107g<I2C, L = DefaultLogger<'a, W>> {
+pub struct Sh1107g<I2C, L = DefaultLogger<W>> {
     pub(crate) i2c: I2C,
     pub(crate) address: u8,
     pub(crate) buffer: [u8; BUFFER_SIZE], // Internal buffer
@@ -77,18 +77,18 @@ impl <I2C, L> Sh1107g<I2C, L>{
     }
     
     #[cfg(feature = "debug_log")]
-    pub fn new_with_logger(i2c: I2C, address: u8, logger: &mut dyn Logger) -> Self {
+    pub fn new_with_logger(i2c: I2C, address: u8, logger: L) -> Self {
         Self {
             i2c,
             address,
             buffer: [0; BUFFER_SIZE],
-            logger: Some(logger),
+            logger: logger,
         }
     }
 
 }
 // Builder struct
-pub struct Sh1107gBuilder<I2C, L: Logger = DefaultLogger> {
+pub struct Sh1107gBuilder<I2C, L: Logger = DefaultLogger<W>> {
     i2c: Option<I2C>,
     address: u8,      // Configure default address or choice Option type
     logger: Option<L>,
@@ -96,7 +96,7 @@ pub struct Sh1107gBuilder<I2C, L: Logger = DefaultLogger> {
 }
 
 // Sh1107gBuilder implement block
-impl<I2C, L: Logger> Sh1107gBuilder<I2C, L> {
+impl<I2C, L: Logger + core::default::Default> Sh1107gBuilder<I2C, L> {
     /// Make new builder instance
     /// Designation default I2C address
     pub fn new() -> Self {
@@ -126,11 +126,11 @@ impl<I2C, L: Logger> Sh1107gBuilder<I2C, L> {
         self
     }
 
-    pub fn build(self) -> Sh1107g<I2C, L> {
+    pub fn build_log(self) -> Sh1107g<I2C, L> {
         Sh1107g::new(
             self.i2c.expect("I2C must be set"),
             self.address,
-            self.logger.unwrap_or_else(|| DefaultLogger::default()),
+            self.logger.unwrap_or_else(L::default),
         )
     }
     // If you need other method, add other setting method, example: size,rotate,etc...
