@@ -53,7 +53,8 @@ where
             use heapless::String;
             let mut msg = String::<16>::new();
             let _ = write!(&mut msg, "CMD = 0x{:02X}", cmd);
-            logger.log(&msg);
+            // logger は `&mut &'a mut L` なので、二重デリファレンスして `&mut L` を取得
+            (*logger).log(&msg);
         }
 
         let payload = [0x80, cmd];
@@ -83,7 +84,8 @@ where
 
         #[cfg(feature = "debug_log")]
         if let Some(logger) = self.logger.as_mut() {
-            log_init_sequence(logger);
+            // logger は `&mut &'a mut L` なので、二重デリファレンスして `&mut L` を取得
+            log_init_sequence(*logger);
         }
 
         Ok(())
