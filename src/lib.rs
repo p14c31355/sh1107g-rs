@@ -33,8 +33,6 @@ pub type DefaultLogger<'a, W> = SerialLogger<'a, W>;
 #[cfg(not(feature = "debug_log"))]
 pub type DefaultLogger = NoopLogger;
 
-use crate::error::BuilderError;
-
 pub const DISPLAY_WIDTH: u32 = 128;
 pub const DISPLAY_HEIGHT: u32 = 128;
 pub const BUFFER_SIZE: usize = (DISPLAY_WIDTH * DISPLAY_HEIGHT / 8) as usize;
