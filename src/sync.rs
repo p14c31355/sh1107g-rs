@@ -28,7 +28,7 @@ where
     pub fn build_logger(self) -> Result<Sh1107g<'a, I2C, L>, Sh1107gError<E>>{
         let i2c = self.i2c.ok_or(Sh1107gError::Builder(BuilderError::NoI2cConnected))?;
 
-        let oled = Sh1107g::new(i2c, self.address, self.logger);
+        let mut oled = Sh1107g::new(i2c, self.address, self.logger);
 
         if let Err(_e) = oled.init() {
             return Err(Sh1107gError::Builder(BuilderError::InitFailed));
