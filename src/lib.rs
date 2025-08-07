@@ -47,11 +47,11 @@ use dvcdbg::logger::{Logger, SerialLogger};
 use dvcdbg::logger::NoopLogger;
 
 #[cfg(feature = "debug_log")]
-pub type DefaultLogger = SerialLogger;
+pub type DefaultLogger<'a, W> = SerialLogger<'a, W>;
 #[cfg(not(feature = "debug_log"))]
 pub type DefaultLogger = NoopLogger;
 
-pub struct Sh1107g<I2C, L = DefaultLogger> {
+pub struct Sh1107g<I2C, L = DefaultLogger<'a, W>> {
     pub(crate) i2c: I2C,
     pub(crate) address: u8,
     pub(crate) buffer: [u8; BUFFER_SIZE], // Internal buffer

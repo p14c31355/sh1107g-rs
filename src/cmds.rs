@@ -5,6 +5,8 @@
   そのため、cmds.chunks(2) の処理は注意が必要。
   個々のコマンドをsend_commandで送信するのがより確実。
 */
+#[cfg(feature = "debug_log")]
+use dvcdbg::logger::log_cmd;
 
 #[cfg(feature = "debug_log")]
 use dvcdbg::logger::Logger;

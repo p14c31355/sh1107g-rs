@@ -4,6 +4,9 @@
 #[cfg(feature = "sync")]
 use crate::error::{Sh1107gError, BuilderError};
 
+#[cfg(feature = "debug_log")]
+use crate::cmds::log_init_sequence;
+
 #[cfg(feature = "sync")]
 use crate::{Sh1107g, Sh1107gBuilder};
 
@@ -27,13 +30,13 @@ where
             {
                 match self.logger {
                     Some(logger) => Sh1107g::new_with_logger(i2c, self.address, logger),
-                    None => Sh1107g::new(i2c, self.address),
+                    None => Sh1107g::new(i2c, self.address, logger),
                 }
             }
 
             #[cfg(not(feature = "debug_log"))]
             {
-                Sh1107g::new(i2c, self.address)
+                Sh1107g::new(i2c, self.address, logger)
             }
         };
 
@@ -55,10 +58,11 @@ where
     fn send_cmd(&mut self, cmd: u8) -> Result<(), E> {
 
         #[cfg(feature = "debug_log")]
+        use core::fmt::Write;
         if let Some(logger) = self.logger.as_mut() {
             use heapless::String;
             let mut msg = String::<16>::new();
-            let _ = ufmt::uwrite!(&mut msg, "CMD = 0x{:02X}", cmd);
+            let _ = write!(&mut msg, "CMD = 0x{:02X}", cmd);
             logger.log(&msg);
         }
 
@@ -80,7 +84,6 @@ where
 
     /// Init display (U8g2ライブラリ準拠)
     pub fn init(&mut self) -> Result<(), Sh1107gError<E>>{
-        use dvcdbg::cmd_debug::log_init_sequence;
         let init_cmds: &[u8] = &[
             0xAE, 0x40, 0x20, 0x02, 0x81, 0x80, 0xA0, 0xA4,
             0xA6, 0xA8, 0x7F, 0xD3, 0x60, 0xD5, 0x51, 0xC0,
