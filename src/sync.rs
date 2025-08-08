@@ -41,12 +41,7 @@ where
 {
     /// 単一コマンド送信
     pub fn send_cmd(&mut self, cmd: u8) -> Result<(), E> {
-        let res = self.i2c.write(self.address, &[0x80, cmd]);
-        if let Some(logger) = self.logger.as_mut() {
-            log_cmd(*logger, cmd);
-            (*logger).log_i2c("send_cmd", res.as_ref().map(|_| ()).map_err(|_| ()));
-        }
-        res
+        self.i2c.write(self.address, &[0x80, cmd])
     }
 
     /// コマンド送信（write_command用）
