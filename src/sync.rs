@@ -40,7 +40,7 @@ where
     E: core::fmt::Debug,
 {
     /// 単一コマンド送信
-    fn send_cmd(&mut self, cmd: u8) -> Result<(), E> {
+    pub fn send_cmd(&mut self, cmd: u8) -> Result<(), E> {
         let res = self.i2c.write(self.address, &[0x80, cmd]);
         if let Some(logger) = self.logger.as_mut() {
             log_cmd(*logger, cmd);
@@ -61,7 +61,6 @@ where
 
     /// 初期化
     pub fn init(&mut self) -> Result<(), Sh1107gError<E>> {
-        /*
         let init_cmds: &[u8] = &[
         0xAE,       // DISPLAY_OFF
         0xAD, 0x8B, // CHARGE_PUMP_ON_CMD + CHARGE_PUMP_ON_DATA （チャージポンプONは早めに）
@@ -79,7 +78,6 @@ where
         0xA6,       // SET_NORMAL_INVERSE_DISPLAY_CMD
         0xAF,       // DISPLAY_ON
     ];
-        */
 
         let mut payload = heapless::Vec::<u8, 40>::new();
         payload.push(0x00).map_err(|_| Sh1107gError::PayloadOverflow)?;
