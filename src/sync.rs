@@ -56,20 +56,20 @@ where
 
         // INIT_SEQUENCE を &[&[u8]] の形で定義
         let init_cmds: &[&[u8]] = &[
-            &DisplayPower::Off,
+            &[DisplayPower::Off as u8],
             &ChargePump(true).to_bytes(),
             &MultiplexRatio(0x7F).to_bytes(),
             &SetStartLine(0x00).to_bytes(),
             &SetClockDiv { divide_ratio: 0x01, oscillator_freq: 0x01 }.to_bytes(),
-            &ComOutputScanDirection::Normal,
+            &[ComOutputScanDirection::Normal as u8],
             &SetComPins(0x12).to_bytes(),
             &Contrast(0x2F).to_bytes(),
             &PreChargePeriod(0x22).to_bytes(),
             &VcomhDeselectLevel(0x35).to_bytes(),
-            &SegmentRemap::Remap,
-            &EntireDisplay::Resume,
-            &Invert::Normal,
-            &DisplayPower::On,
+            &[SegmentRemap::Remap as u8],
+            &[EntireDisplay::Resume as u8],
+            &[Invert::Normal as u8],
+            &[DisplayPower::On as u8],
         ];
 
         let mut payload = heapless::Vec::<u8, 64>::new();
