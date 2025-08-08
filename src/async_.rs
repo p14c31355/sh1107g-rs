@@ -6,9 +6,6 @@ use dvcdbg::logger::Logger;
 #[cfg(feature = "async_")]
 use crate::error::{Sh1107gError, BuilderError};
 
-#[cfg(feature = "debug_log")]
-use crate::cmds::log_init_sequence;
-
 #[cfg(feature = "async_")]
 use crate::{Sh1107g, Sh1107gBuilder};
 
@@ -83,7 +80,7 @@ where
 
         #[cfg(feature = "debug_log")]
         if let Some(logger) = self.logger.as_mut() {
-            log_init_sequence(*logger);
+            // log_init_sequence(*logger);
         }
 
         Ok(())

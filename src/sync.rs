@@ -99,14 +99,17 @@ where
         for page in 0..page_count {
             // ページアドレスセット（cmdsで型化予定）
             self.send_cmd(0xB0 + page as u8)?;
-            self.send_cmd(0x00)?; // カラムアドレス下位
-            self.send_cmd(0x10)?; // カラムアドレス上位
+            self.send_cmd(0x00)?;
+            self.send_cmd(0x10)?;
 
             let start = page * page_width;
             let end = start + page_width;
-            let page_data = &self.buffer[start..end];
 
-            for chunk in page_data.chunks(64) {
+            // ここでバッファのスライスを所有バッファにコピー
+            let page_data_copy: heapless::Vec<u8, {DISPLAY_WIDTH as usize}> = 
+                self.buffer[start..end].iter().copied().collect();
+
+            for chunk in page_data_copy.chunks(64) {
                 self.send(0x40, chunk)?;
             }
         }
