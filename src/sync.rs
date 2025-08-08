@@ -52,24 +52,24 @@ where
 
     /// 初期化コマンド送信（cmds.rsのINIT_SEQUENCEを使う想定）
     pub fn init(&mut self) -> Result<(), Sh1107gError<E>> {
-        use crate::cmds;
+        use crate::cmds::*;
 
         // INIT_SEQUENCE を &[&[u8]] の形で定義
         let init_cmds: &[&[u8]] = &[
-            &cmds::DisplayPower::Off.to_bytes(),
-            &cmds::ChargePump(true).to_bytes(),
-            &cmds::MultiplexRatio(0x7F).to_bytes(),
-            &cmds::SetStartLine(0x00).to_bytes(),
-            &cmds::SetClockDiv { divide_ratio: 0x01, oscillator_freq: 0x01 }.to_bytes(),
-            &cmds::ComOutputScanDirection::Normal.to_bytes(),
-            &cmds::SetComPins(0x12).to_bytes(),
-            &cmds::Contrast(0x2F).to_bytes(),
-            &cmds::PreChargePeriod(0x22).to_bytes(),
-            &cmds::VcomhDeselectLevel(0x35).to_bytes(),
-            &cmds::SegmentRemap::Remap.to_bytes(),
-            &cmds::EntireDisplay::Resume.to_bytes(),
-            &cmds::Invert::Normal.to_bytes(),
-            &cmds::DisplayPower::On.to_bytes(),
+            &DisplayPower::Off.to_bytes(),
+            &ChargePump(true).to_bytes(),
+            &MultiplexRatio(0x7F).to_bytes(),
+            &SetStartLine(0x00).to_bytes(),
+            &SetClockDiv { divide_ratio: 0x01, oscillator_freq: 0x01 }.to_bytes(),
+            &ComOutputScanDirection::Normal.to_bytes(),
+            &SetComPins(0x12).to_bytes(),
+            &Contrast(0x2F).to_bytes(),
+            &PreChargePeriod(0x22).to_bytes(),
+            &VcomhDeselectLevel(0x35).to_bytes(),
+            &SegmentRemap::Remap.to_bytes(),
+            &EntireDisplay::Resume.to_bytes(),
+            &Invert::Normal.to_bytes(),
+            &DisplayPower::On.to_bytes(),
         ];
 
         let mut payload = heapless::Vec::<u8, 64>::new();

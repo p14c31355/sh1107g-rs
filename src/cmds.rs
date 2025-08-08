@@ -86,6 +86,50 @@ impl ChargePump {
     }
 }
 
+/// マルチプレックス比設定
+pub struct MultiplexRatio(pub u8);
+impl MultiplexRatio {
+    pub fn to_bytes(&self) -> [u8; 2] {
+        [0xA8, self.0]
+    }
+}
+
+/// COM出力スキャン方向
+pub enum ComOutputScanDirection {
+    Normal = 0xC0,
+    Remapped = 0xC8,
+}
+
+/// COMピン設定
+pub struct SetComPins(pub u8);
+impl SetComPins {
+    pub fn to_bytes(&self) -> [u8; 2] {
+        [0xDA, self.0]
+    }
+}
+
+/// プリチャージ期間設定
+pub struct PreChargePeriod(pub u8);
+impl PreChargePeriod {
+    pub fn to_bytes(&self) -> [u8; 2] {
+        [0xD9, self.0]
+    }
+}
+
+/// VCOMHデセレクトレベル設定
+pub struct VcomhDeselectLevel(pub u8);
+impl VcomhDeselectLevel {
+    pub fn to_bytes(&self) -> [u8; 2] {
+        [0xDB, self.0]
+    }
+}
+
+/// セグメントリマップ
+pub enum SegmentRemap {
+    Normal = 0xA0,
+    Remap = 0xA1,
+}
+
 /// 汎用: 1バイトコマンド（引数なし）
 pub const fn cmd(byte: u8) -> [u8; 1] {
     [byte]
