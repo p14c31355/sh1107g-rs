@@ -1,3 +1,6 @@
+    use heapless::String;
+    use core::fmt::Write; // fmt::Write トレイトを使う
+
 #[cfg(feature = "debug_log")]
 use dvcdbg::logger::{Logger, log_cmd};
 
@@ -42,12 +45,13 @@ where
     /// 単一コマンド送信
     pub fn send_cmd(&mut self, cmd: u8) -> Result<(), E> {
         let res = self.i2c.write(self.address, &[0x80, cmd]);
+
         if let Some(logger) = self.logger.as_mut() {
-            let _ = logger.log_i2c(
-                &format_args!("send_cmd: 0x{:02X}", cmd).to_string(),
-                res.as_ref().map(|_| ()).map_err(|_| ()),
-            );
+            let mut buf: String<64> = String::new();
+            let _ = write!(buf, "send_cmd: 0x{:02X}", cmd);
+            logger.log_i2c(buf.as_str(), res.as_ref().map(|_| ()).map_err(|_| ()));
         }
+
         res
     }
 
