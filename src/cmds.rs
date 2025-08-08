@@ -1,10 +1,4 @@
-/* 
-  PythonドライバとSH1107データシートから導出されたコマンド列
-  コマンドを2バイトずつ（コマンドバイト + データバイト）送信
-  ただし、0xAE, 0x20, 0xA0, 0xC0, 0xAF は単独コマンド
-  そのため、cmds.chunks(2) の処理は注意が必要。
-  個々のコマンドをsend_commandで送信するのがより確実。
-*/
+/// cmds.rs
 #[cfg(feature = "debug_log")]
 use dvcdbg::logger::log_cmd;
 
@@ -12,11 +6,10 @@ use dvcdbg::logger::log_cmd;
 use dvcdbg::logger::Logger;
 
 pub const DISPLAY_OFF: u8 = 0xAE;
-pub const DISPLAY_ON: u8 = 0xAF;
-pub const SET_MULTIPLEX_RATIO: u8 = 0xA8;
-pub const MULTIPLEX_RATIO_DATA: u8 = 0x7F;
 pub const CHARGE_PUMP_ON_CMD: u8 = 0xAD;
 pub const CHARGE_PUMP_ON_DATA: u8 = 0x8B;
+pub const SET_MULTIPLEX_RATIO: u8 = 0xA8;
+pub const MULTIPLEX_RATIO_DATA: u8 = 0x7F;
 pub const PAGE_ADDRESSING_CMD: u8 = 0x20;
 pub const SEGMENT_REMAP: u8 = 0xA0;
 pub const COM_OUTPUT_SCAN_DIR: u8 = 0xC0;
@@ -32,20 +25,20 @@ pub const VCOM_DESELECT_CMD: u8 = 0xDB;
 pub const VCOM_DESELECT_DATA: u8 = 0x35;
 pub const CLOCK_DIVIDE_CMD: u8 = 0xD5;
 pub const CLOCK_DIVIDE_DATA: u8 = 0x51;
-
 pub const SET_COM_PINS_CMD: u8 = 0xDA;
 pub const SET_COM_PINS_DATA: u8 = 0x12;
 pub const SET_ENTIRE_DISPLAY_ON_OFF_CMD: u8 = 0xA4;
 pub const SET_NORMAL_INVERSE_DISPLAY_CMD: u8 = 0xA6;
+pub const DISPLAY_ON: u8 = 0xAF;
 
 #[cfg(feature = "debug_log")]
 /// デバッグ用の初期化コマンド列をログ出力する
 pub fn log_init_sequence<L: Logger>(logger: &mut L) {
     log_cmd(logger, DISPLAY_OFF);
-    log_cmd(logger, SET_MULTIPLEX_RATIO);
-    log_cmd(logger, MULTIPLEX_RATIO_DATA);
     log_cmd(logger, CHARGE_PUMP_ON_CMD);
     log_cmd(logger, CHARGE_PUMP_ON_DATA);
+    log_cmd(logger, SET_MULTIPLEX_RATIO);
+    log_cmd(logger, MULTIPLEX_RATIO_DATA);
     log_cmd(logger, PAGE_ADDRESSING_CMD);
     log_cmd(logger, SEGMENT_REMAP);
     log_cmd(logger, COM_OUTPUT_SCAN_DIR);

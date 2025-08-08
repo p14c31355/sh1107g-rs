@@ -61,12 +61,25 @@ where
 
     /// 初期化
     pub fn init(&mut self) -> Result<(), Sh1107gError<E>> {
+        /*
         let init_cmds: &[u8] = &[
-            0xAE, 0x40, 0x20, 0x02, 0x81, 0x80, 0xA0, 0xA4,
-            0xA6, 0xA8, 0x7F, 0xD3, 0x60, 0xD5, 0x51, 0xC0,
-            0xD9, 0x22, 0xDA, 0x12, 0xDB, 0x35, 0xAD, 0x8B,
-            0xAF,
-        ];
+        0xAE,       // DISPLAY_OFF
+        0xAD, 0x8B, // CHARGE_PUMP_ON_CMD + CHARGE_PUMP_ON_DATA （チャージポンプONは早めに）
+        0xA8, 0x7F, // SET_MULTIPLEX_RATIO + MULTIPLEX_RATIO_DATA
+        0xD3, 0x60, // DISPLAY_OFFSET_CMD + DISPLAY_OFFSET_DATA
+        0x40,       // DISPLAY_START_LINE_CMD
+        0xD5, 0x51, // CLOCK_DIVIDE_CMD + CLOCK_DIVIDE_DATA
+        0xC0,       // COM_OUTPUT_SCAN_DIR
+        0xDA, 0x12, // SET_COM_PINS_CMD + SET_COM_PINS_DATA
+        0x81, 0x80, // CONTRAST_CONTROL_CMD + CONTRAST_CONTROL_DATA
+        0xD9, 0x22, // PRECHARGE_CMD + PRECHARGE_DATA
+        0xDB, 0x35, // VCOM_DESELECT_CMD + VCOM_DESELECT_DATA
+        0xA0,       // SEGMENT_REMAP
+        0xA4,       // SET_ENTIRE_DISPLAY_ON_OFF_CMD
+        0xA6,       // SET_NORMAL_INVERSE_DISPLAY_CMD
+        0xAF,       // DISPLAY_ON
+    ];
+        */
 
         let mut payload = heapless::Vec::<u8, 40>::new();
         payload.push(0x00).map_err(|_| Sh1107gError::PayloadOverflow)?;
