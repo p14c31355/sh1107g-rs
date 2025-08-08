@@ -1,5 +1,5 @@
-    use heapless::String;
-    use core::fmt::Write; // fmt::Write トレイトを使う
+use heapless::String;
+use core::fmt::Write; // fmt::Write トレイトを使う
 
 #[cfg(feature = "debug_log")]
 use dvcdbg::logger::{Logger, log_cmd};

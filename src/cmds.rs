@@ -1,6 +1,4 @@
 /// cmds.rs
-#[cfg(feature = "debug_log")]
-use dvcdbg::logger::log_cmd;
 
 #[cfg(feature = "debug_log")]
 use dvcdbg::logger::Logger;
@@ -32,31 +30,34 @@ pub const SET_NORMAL_INVERSE_DISPLAY_CMD: u8 = 0xA6;
 pub const DISPLAY_ON: u8 = 0xAF;
 
 #[cfg(feature = "debug_log")]
-/// デバッグ用の初期化コマンド列をログ出力する
 pub fn log_init_sequence<L: Logger>(logger: &mut L) {
-    log_cmd(logger, DISPLAY_OFF);
-    log_cmd(logger, CHARGE_PUMP_ON_CMD);
-    log_cmd(logger, CHARGE_PUMP_ON_DATA);
-    log_cmd(logger, SET_MULTIPLEX_RATIO);
-    log_cmd(logger, MULTIPLEX_RATIO_DATA);
-    log_cmd(logger, PAGE_ADDRESSING_CMD);
-    log_cmd(logger, SEGMENT_REMAP);
-    log_cmd(logger, COM_OUTPUT_SCAN_DIR);
-    log_cmd(logger, DISPLAY_START_LINE_CMD);
-    log_cmd(logger, DISPLAY_START_LINE_DATA);
-    log_cmd(logger, CONTRAST_CONTROL_CMD);
-    log_cmd(logger, CONTRAST_CONTROL_DATA);
-    log_cmd(logger, DISPLAY_OFFSET_CMD);
-    log_cmd(logger, DISPLAY_OFFSET_DATA);
-    log_cmd(logger, PRECHARGE_CMD);
-    log_cmd(logger, PRECHARGE_DATA);
-    log_cmd(logger, VCOM_DESELECT_CMD);
-    log_cmd(logger, VCOM_DESELECT_DATA);
-    log_cmd(logger, CLOCK_DIVIDE_CMD);
-    log_cmd(logger, CLOCK_DIVIDE_DATA);
-    log_cmd(logger, SET_COM_PINS_CMD);
-    log_cmd(logger, SET_COM_PINS_DATA);
-    log_cmd(logger, SET_ENTIRE_DISPLAY_ON_OFF_CMD);
-    log_cmd(logger, SET_NORMAL_INVERSE_DISPLAY_CMD);
-    log_cmd(logger, DISPLAY_ON);
+    let cmds: &[u8] = &[
+        DISPLAY_OFF,
+        CHARGE_PUMP_ON_CMD,
+        CHARGE_PUMP_ON_DATA,
+        SET_MULTIPLEX_RATIO,
+        MULTIPLEX_RATIO_DATA,
+        PAGE_ADDRESSING_CMD,
+        SEGMENT_REMAP,
+        COM_OUTPUT_SCAN_DIR,
+        DISPLAY_START_LINE_CMD,
+        DISPLAY_START_LINE_DATA,
+        CONTRAST_CONTROL_CMD,
+        CONTRAST_CONTROL_DATA,
+        DISPLAY_OFFSET_CMD,
+        DISPLAY_OFFSET_DATA,
+        PRECHARGE_CMD,
+        PRECHARGE_DATA,
+        VCOM_DESELECT_CMD,
+        VCOM_DESELECT_DATA,
+        CLOCK_DIVIDE_CMD,
+        CLOCK_DIVIDE_DATA,
+        SET_COM_PINS_CMD,
+        SET_COM_PINS_DATA,
+        SET_ENTIRE_DISPLAY_ON_OFF_CMD,
+        SET_NORMAL_INVERSE_DISPLAY_CMD,
+        DISPLAY_ON,
+    ];
+
+    logger.log_bytes("init_sequence", cmds);
 }
