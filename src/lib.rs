@@ -62,6 +62,12 @@ where
     pub fn clear_buffer(&mut self) {
         self.buffer.iter_mut().for_each(|b| *b = 0x00);
     }
+
+    pub fn with_logger<F: FnOnce(&mut L)>(&mut self, f: F) {
+        if let Some(logger) = self.logger.as_mut() {
+            f(logger);
+        }
+    }
 }
 
 // L は Logger を実装する必要があるため、`where`句に追加します。
