@@ -47,7 +47,7 @@ where
         let res = self.i2c.write(self.address, &[0x80, cmd]);
 
         if let Some(logger) = self.logger.as_mut() {
-            let mut buf: String<64> = String::new();
+            let mut buf = heapless::String::<64>::new();
             let _ = write!(buf, "send_cmd: 0x{:02X}", cmd);
             logger.log_i2c(buf.as_str(), res.as_ref().map(|_| ()).map_err(|_| ()));
         }
