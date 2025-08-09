@@ -82,7 +82,7 @@ impl SetClockDiv {
 pub struct ChargePump(pub bool);
 impl ChargePump {
     pub fn to_bytes(&self) -> [u8; 2] {
-        [0xAD, if self.0 { 0x8B } else { 0x10 }]
+        [0xAD, if self.0 { 0x8B } else { 0x8A }]
     }
 }
 
@@ -143,30 +143,20 @@ pub const fn cmd(byte: u8) -> [u8; 1] {
     [byte]
 }
 
-/// SH1107G の初期化コマンド列
-pub const SH1107G_INIT_CMDS: &[u8] = {
-    use DisplayPower::*;
-    use AddressMode::*;
-    use SegmentRemap::*;
-    use ComOutputScanDirection::*;
-    use EntireDisplay::*;
-    use Invert::*;
-
-    &[
-        DisplayPower::Off.to_bytes()[0], // Display OFF
-        SetStartLine(0x00).to_bytes()[0], // Display start line = 0
-        Contrast(0x2F).to_bytes()[0], Contrast(0x2F).to_bytes()[1], // Contrast
-        AddressMode::Page.to_bytes()[0], // Memory addressing mode: page
-        SegmentRemap::Normal.to_bytes()[0], // Segment remap normal
-        ComOutputScanDirection::Normal.to_bytes()[0], // Common output scan direction normal
-        EntireDisplay::Resume.to_bytes()[0], // Entire display ON from RAM
-        Invert::Normal.to_bytes()[0], // Normal display
-        MultiplexRatio(0x7F).to_bytes()[0], MultiplexRatio(0x7F).to_bytes()[1], // Multiplex ratio 128
-        SetDisplayOffset(0x60).to_bytes()[0], SetDisplayOffset(0x60).to_bytes()[1], // Display offset
-        SetClockDiv { divide_ratio: 0x01, oscillator_freq: 0x05 }.to_bytes()[0], SetClockDiv { divide_ratio: 0x01, oscillator_freq: 0x05 }.to_bytes()[1], // Oscillator frequency
-        PreChargePeriod(0x22).to_bytes()[0], PreChargePeriod(0x22).to_bytes()[1], // Pre-charge period
-        VcomhDeselectLevel(0x35).to_bytes()[0], VcomhDeselectLevel(0x35).to_bytes()[1], // VCOM deselect level
-        ChargePump(true).to_bytes()[0], ChargePump(true).to_bytes()[1], // DC-DC control
-        DisplayPower::On.to_bytes()[0], // Display ON
-    ]
-};
+const SH1107G_INIT_CMDS: &[u8] = &[
+    0xAE, // Display OFF
+    0xDC, 0x00, // Display start line = 0
+    0x81, 0x2F, // Contrast
+    0x20, // Memory addressing mode: page
+    0xA0, // Segment remap normal
+    0xC0, // Common output scan direction normal
+    0xA4, // Entire display ON from RAM
+    0xA6, // Normal display
+    0xA8, 0x7F, // Multiplex ratio 128
+    0xD3, 0x60, // Display offset
+    0xD5, 0x51, // Oscillator frequency
+    0xD9, 0x22, // Pre-charge period
+    0xDB, 0x35, // VCOM deselect level
+    0xAD, 0x8A, // DC-DC control
+    0xAF,       // Display ON
+];
