@@ -19,6 +19,7 @@ where
         let mut oled = Sh1107g::new(i2c, self.address, self.logger);
 
         oled.init()?;
+        oled.flush()?;
         Ok(oled)
     }
 }
