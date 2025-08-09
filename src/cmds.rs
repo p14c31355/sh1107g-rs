@@ -60,7 +60,7 @@ impl SetColumnAddress {
 pub struct SetStartLine(pub u8);
 impl SetStartLine {
     pub fn to_bytes(&self) -> [u8; 1] {
-        [0x40 | (self.0 & 0x7F)]
+        [0xDC | (self.0 & 0x7F)]
     }
 }
 
@@ -82,7 +82,7 @@ impl SetClockDiv {
 pub struct ChargePump(pub bool);
 impl ChargePump {
     pub fn to_bytes(&self) -> [u8; 2] {
-        [0x8D, if self.0 { 0x14 } else { 0x10 }]
+        [0xAD, if self.0 { 0x8B } else { 0x10 }]
     }
 }
 
