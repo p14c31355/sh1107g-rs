@@ -11,7 +11,7 @@ impl<'a, I2C, L, E> Sh1107gBuilder<'a, I2C, L>
 where
     I2C: I2c<Error = E>,
     L: Logger + 'a,
-    E: Debug,
+    E: Debug + embedded_hal::i2c::Error,
     Sh1107gError<E>: From<E>,
 {
     pub fn build_logger(self) -> Result<Sh1107g<'a, I2C, L>, Sh1107gError<E>> {
@@ -28,7 +28,7 @@ impl<'a, I2C, L, E> Sh1107g<'a, I2C, L>
 where
     I2C: I2c<Error = E>,
     L: Logger + 'a,
-    E: Debug,
+    E: Debug + embedded_hal::i2c::Error,
 {
     /// 共通I2C送信＋ロギング関数。制御バイト（0x80, 0x40など）＋データ配列を送る。
     fn send(&mut self, control: u8, data: &[u8]) -> Result<(), Sh1107gError<E>> {

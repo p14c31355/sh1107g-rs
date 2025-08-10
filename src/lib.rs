@@ -87,7 +87,7 @@ where
     clear_on_init: bool,
 }
 
-impl<'a, I2C, L> Sh1107gBuilder<'a, I2C, L>
+impl<'a, I2C, L, E> Sh1107gBuilder<'a, I2C, L>
 where
     I2C: embedded_hal::i2c::I2c<Error = E>,
     L: Logger + 'a,
@@ -121,7 +121,7 @@ where
 }
 
 
-impl<'a, I2C, L> Dimensions for Sh1107g<'a, I2C, L>
+impl<'a, I2C, L, E> Dimensions for Sh1107g<'a, I2C, L>
 where
     I2C: embedded_hal::i2c::I2c<Error = E>,
     L: Logger + 'a,
@@ -132,7 +132,7 @@ where
     }
 }
 
-impl<'a, I2C, L> DrawTarget for Sh1107g<'a, I2C, L>
+impl<'a, I2C, L, E> DrawTarget for Sh1107g<'a, I2C, L>
 where
     I2C: embedded_hal::i2c::I2c<Error = E>,
     L: Logger + 'a,
