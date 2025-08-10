@@ -78,6 +78,7 @@ where
     i2c: Option<I2C>,
     address: u8,
     logger: Option<&'a mut L>,
+    clear_on_init: bool,
 }
 
 impl<'a, I2C, L> Sh1107gBuilder<'a, I2C, L>
@@ -89,22 +90,28 @@ where
             i2c: Some(i2c),
             address: 0x3C,
             logger: Some(logger),
+            clear_on_init: false,
         }
     }
-    
-    pub fn with_address(mut self, address: u8) -> Self {
-        self.address = address;
+
+    pub fn clear_on_init(mut self, enable: bool) -> Self {
+        self.clear_on_init = enable;
         self
     }
 
-    pub fn build(self) -> Sh1107g<'a, I2C, L> {
-        Sh1107g::new(
-            self.i2c.expect("I2C must be set"),
+    pub fn build(mut self) -> Sh1107g<'a, I2C, L> {
+        let mut display = Sh1107g::new(
+            self.i2c.take().expect("I2C must be set"),
             self.address,
             self.logger,
-        )
+        );
+        if self.clear_on_init {
+            display.clear_buffer();
+        }
+        display
     }
 }
+
 
 impl<'a, I2C, L> Dimensions for Sh1107g<'a, I2C, L>
 where
