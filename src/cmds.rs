@@ -143,7 +143,7 @@ pub const fn cmd(byte: u8) -> [u8; 1] {
     [byte]
 }
 
-const SH1107G_INIT_CMDS: &[u8] = &[
+pub const SH1107G_INIT_CMDS: &[u8] = &[
     0xAE, // Display OFF
     0xDC, 0x00, // Display start line = 0
     0x81, 0x2F, // Contrast
