@@ -44,9 +44,14 @@ pub const BUFFER_SIZE: usize = (DISPLAY_WIDTH * DISPLAY_HEIGHT / 8) as usize;
 // `Option`はジェネリック型パラメータを持つため、ライフタイム `'a` が必要になります。
 use crate::cmds::*;
 
-pub struct Sh1107g<I2C> {
-    i2c: I2C,
-    buffer: [u8; BUFFER_SIZE],
+pub struct Sh1107g<'a, I2C, L> 
+where
+    L: Logger + 'a,
+{
+    pub(crate) i2c: I2C,
+    pub(crate) address: u8,
+    pub(crate) buffer: [u8; BUFFER_SIZE],
+    pub(crate) logger: Option<&'a mut L>,
 }
 
 impl<I2C, E> Sh1107g<I2C>
@@ -54,9 +59,15 @@ where
     I2C: I2c<Error = E>,
     E: embedded_hal::i2c::Error,
 {
-    pub fn new(i2c: I2C) -> Self {
-        Self { i2c, buffer }
+    pub fn new(i2c: I2C, address: u8, logger: Option<&'a mut L>) -> Self {
+    Self {
+        i2c,
+        address,
+        logger,
+        buffer: [0u8; BUFFER_SIZE],
     }
+}
+
 
     fn write_i2c(&mut self, control: u8, payload: &[u8]) -> Result<(), Sh1107gError<E>> {
         if payload.len() > 128 {
@@ -95,6 +106,18 @@ where
         &mut self.buffer
     }
 }
+
+impl<'a, I2C, L> Sh1107g<'a, I2C, L>
+where
+    L: Logger,
+{
+    pub fn clear_buffer(&mut self) {
+        for b in self.buffer.iter_mut() {
+            *b = 0;
+        }
+    }
+}
+
 
 // L は Logger を実装する必要があるため、`where`句に追加します。
 pub struct Sh1107gBuilder<'a, I2C, L>
