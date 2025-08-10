@@ -16,15 +16,12 @@ use embedded_graphics_core::{
     primitives::Rectangle,
     Pixel,
 };
-use embedded_hal::i2c::I2c;
 
 use core::{
     convert::Infallible,
     result::Result,
     option::Option::{self, Some},
 };
-
-use error::*;
 
 #[cfg(feature = "debug_log")]
 use dvcdbg::logger::{Logger, SerialLogger};
@@ -42,7 +39,6 @@ pub const BUFFER_SIZE: usize = (DISPLAY_WIDTH * DISPLAY_HEIGHT / 8) as usize;
 
 // LはOptionでラップされているため、`?Sized`は不要です。
 // `Option`はジェネリック型パラメータを持つため、ライフタイム `'a` が必要になります。
-use crate::cmds::*;
 
 pub struct Sh1107g<'a, I2C, L> 
 where
@@ -54,10 +50,11 @@ where
     pub(crate) logger: Option<&'a mut L>,
 }
 
-impl<I2C, E> Sh1107g<I2C>
+impl<'a, I2C, L, E> Sh1107g<'a, I2C, L>
 where
-    I2C: I2c<Error = E>,
+    I2C: embedded_hal::i2c::I2c<Error = E>,
     E: embedded_hal::i2c::Error,
+    L: Logger + 'a,
 {
     pub fn new(i2c: I2C, address: u8, logger: Option<&'a mut L>) -> Self {
     Self {
@@ -68,56 +65,16 @@ where
     }
 }
 
-
-    fn write_i2c(&mut self, control: u8, payload: &[u8]) -> Result<(), Sh1107gError<E>> {
-        if payload.len() > 128 {
-            return Err(Sh1107gError::PayloadOverflow);
-        }
-        let mut buf = [0u8; 129]; // control + up to 128 bytes
-        buf[0] = control;
-        buf[1..1 + payload.len()].copy_from_slice(payload);
-        self.i2c.write(0x3C, &buf[..1 + payload.len()])?;
-        Ok(())
-    }
-
-    pub fn send_cmd(&mut self, cmd: &[u8]) -> Result<(), Sh1107gError<E>> {
-        self.write_i2c(0x00, cmd)
-    }
-
-    pub fn send_data(&mut self, data: &[u8]) -> Result<(), Sh1107gError<E>> {
-        self.write_i2c(0x40, data)
-    }
-
-    pub fn init(&mut self) -> Result<(), Sh1107gError<E>> {
-        self.send_cmd(SH1107G_INIT_CMDS)
-    }
-
-    pub fn flush(&mut self) -> Result<(), Sh1107gError<E>> {
-        for page in 0..8 {
-            self.send_cmd(&SetPageAddress(page).to_bytes())?;
-            self.send_cmd(&SetColumnAddress(0).to_bytes())?;
-            let start = page * 128;
-            self.send_data(&self.buffer[start..start + 128])?;
-        }
-        Ok(())
-    }
-
     pub fn buffer_mut(&mut self) -> &mut [u8] {
         &mut self.buffer
     }
-}
 
-impl<'a, I2C, L> Sh1107g<'a, I2C, L>
-where
-    L: Logger,
-{
     pub fn clear_buffer(&mut self) {
         for b in self.buffer.iter_mut() {
             *b = 0;
         }
     }
 }
-
 
 // L は Logger を実装する必要があるため、`where`句に追加します。
 pub struct Sh1107gBuilder<'a, I2C, L>
@@ -132,7 +89,9 @@ where
 
 impl<'a, I2C, L> Sh1107gBuilder<'a, I2C, L>
 where
-    L: Logger,
+    I2C: embedded_hal::i2c::I2c<Error = E>,
+    L: Logger + 'a,
+    E: embedded_hal::i2c::Error,
 {
     pub fn new(i2c: I2C, logger: &'a mut L) -> Self {
         Self {
@@ -164,7 +123,9 @@ where
 
 impl<'a, I2C, L> Dimensions for Sh1107g<'a, I2C, L>
 where
-    L: Logger,
+    I2C: embedded_hal::i2c::I2c<Error = E>,
+    L: Logger + 'a,
+    E: embedded_hal::i2c::Error,
 {
     fn bounding_box(&self) -> Rectangle {
         Rectangle::new(Point::new(0, 0), Size::new(DISPLAY_WIDTH, DISPLAY_HEIGHT))
@@ -173,7 +134,10 @@ where
 
 impl<'a, I2C, L> DrawTarget for Sh1107g<'a, I2C, L>
 where
-    L: Logger,
+    I2C: embedded_hal::i2c::I2c<Error = E>,
+    L: Logger + 'a,
+    E: embedded_hal::i2c::Error,
+
 {
     type Color = BinaryColor;
     type Error = Infallible;
