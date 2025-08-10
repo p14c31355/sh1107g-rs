@@ -23,6 +23,8 @@ checksum = "1fd0f2584146f6f2ef48085050886acf353beff7305ebd1ae69500e27c67f64b"
 [[package]]
 name = "dvcdbg"
 version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "54f1455eee4f8c15b13793b388043a35b63c85cef0c72be9c5318afddb67d389"
 dependencies = [
  "embedded-hal",
  "heapless",
