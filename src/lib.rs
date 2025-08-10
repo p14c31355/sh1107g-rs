@@ -16,6 +16,7 @@ use embedded_graphics_core::{
     primitives::Rectangle,
     Pixel,
 };
+use embedded_hal::i2c::I2c;
 
 use core::{
     convert::Infallible,
@@ -45,16 +46,16 @@ use crate::cmds::*;
 
 pub struct Sh1107g<I2C> {
     i2c: I2C,
-    buffer: [u8; 1024],
+    buffer: [u8; BUFFER_SIZE],
 }
 
 impl<I2C, E> Sh1107g<I2C>
 where
-    I2C: Write<Error = E>,
+    I2C: I2c<Error = E>,
     E: embedded_hal::i2c::Error,
 {
     pub fn new(i2c: I2C) -> Self {
-        Self { i2c, buffer: [0; 1024] }
+        Self { i2c, buffer }
     }
 
     fn write_i2c(&mut self, control: u8, payload: &[u8]) -> Result<(), Sh1107gError<E>> {
