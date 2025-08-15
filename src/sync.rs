@@ -1,33 +1,12 @@
 use heapless::Vec;
 use core::fmt::Debug;
 
-#[cfg(feature = "debug_log")]
-use dvcdbg::logger::Logger;
-
-use crate::{error::{BuilderError, Sh1107gError},  Sh1107gBuilder, Sh1107g};
+use crate::{error::Sh1107gError,  Sh1107g};
 use embedded_hal::i2c::I2c;
 
-impl<'a, I2C, L, E> Sh1107gBuilder<'a, I2C, L>
+impl<I2C, E> Sh1107g<I2C>
 where
     I2C: I2c<Error = E>,
-    L: Logger + 'a,
-    E: Debug + embedded_hal::i2c::Error,
-    Sh1107gError<E>: From<E>,
-{
-    pub fn build_logger(self) -> Result<Sh1107g<'a, I2C, L>, Sh1107gError<E>> {
-        let i2c = self.i2c.ok_or(Sh1107gError::Builder(BuilderError::NoI2cConnected))?;
-        let mut oled = Sh1107g::new(i2c, self.address, self.logger);
-
-        oled.init()?;
-        oled.flush()?;
-        Ok(oled)
-    }
-}
-
-impl<'a, I2C, L, E> Sh1107g<'a, I2C, L>
-where
-    I2C: I2c<Error = E>,
-    L: Logger + 'a,
     E: Debug + embedded_hal::i2c::Error,
 {
     /// 共通I2C送信＋ロギング関数。制御バイト（0x80, 0x40など）＋データ配列を送る。
@@ -37,11 +16,6 @@ where
         payload.extend_from_slice(data).map_err(|_| Sh1107gError::PayloadOverflow)?;
 
         let res = self.i2c.write(self.address, &payload);
-
-        if let Some(logger) = self.logger.as_mut() {
-            logger.log_bytes("i2c_write", &payload);
-            logger.log_i2c("i2c_status", res.as_ref().map(|_| ()).map_err(|_| ()));
-        }
 
         res.map_err(Sh1107gError::I2cError)
     }
@@ -86,9 +60,6 @@ where
         }
 
         let res = self.i2c.write(self.address, &payload);
-        if let Some(logger) = self.logger.as_mut() {
-            logger.log_bytes("init_sequence", &payload);
-        }
         res.map_err(Sh1107gError::I2cError)?;
         Ok(())
     }

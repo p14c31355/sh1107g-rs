@@ -19,18 +19,8 @@ embedded-graphics-core = "0.4.0"
 
 embedded-hal-async = { version = "1.0.0", optional = true }
 
-ufmt = "0.2.0"
-ufmt-macros = "0.3.0"
-ufmt-write = "0.1.0"
-
-[dependencies.dvcdbg]
-version = "0.1.0"
-features = ["debug_log"]
-optional = true
-
 [features]
 default = ["sync"]
 sync = ["dep:embedded-hal"]
 async_ = ["dep:embedded-hal-async"]
 std = []
-debug_log = ["dep:dvcdbg"]

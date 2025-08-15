@@ -23,44 +23,25 @@ use core::{
     option::Option::{self, Some},
 };
 
-#[cfg(feature = "debug_log")]
-use dvcdbg::logger::{Logger, SerialLogger};
-#[cfg(not(feature = "debug_log"))]
-use dvcdbg::logger::NoopLogger;
-
-#[cfg(feature = "debug_log")]
-pub type DefaultLogger<'a, W> = SerialLogger<'a, W>;
-#[cfg(not(feature = "debug_log"))]
-pub type DefaultLogger = NoopLogger;
-
 pub const DISPLAY_WIDTH: u32 = 128;
 pub const DISPLAY_HEIGHT: u32 = 128;
 pub const BUFFER_SIZE: usize = (DISPLAY_WIDTH * DISPLAY_HEIGHT / 8) as usize;
 
-// LはOptionでラップされているため、`?Sized`は不要です。
-// `Option`はジェネリック型パラメータを持つため、ライフタイム `'a` が必要になります。
-
-pub struct Sh1107g<'a, I2C, L> 
-where
-    L: Logger + 'a,
-{
+pub struct Sh1107g<I2C> {
     pub(crate) i2c: I2C,
     pub(crate) address: u8,
     pub(crate) buffer: [u8; BUFFER_SIZE],
-    pub(crate) logger: Option<&'a mut L>,
 }
 
-impl<'a, I2C, L, E> Sh1107g<'a, I2C, L>
+impl<I2C, E> Sh1107g<I2C>
 where
     I2C: embedded_hal::i2c::I2c<Error = E>,
     E: embedded_hal::i2c::Error,
-    L: Logger + 'a,
 {
-    pub fn new(i2c: I2C, address: u8, logger: Option<&'a mut L>) -> Self {
+    pub fn new(i2c: I2C, address: u8) -> Self {
     Self {
         i2c,
         address,
-        logger,
         buffer: [0u8; BUFFER_SIZE],
     }
 }
@@ -76,28 +57,21 @@ where
     }
 }
 
-// L は Logger を実装する必要があるため、`where`句に追加します。
-pub struct Sh1107gBuilder<'a, I2C, L>
-where
-    L: Logger,
-{
+pub struct Sh1107gBuilder<I2C> {
     i2c: Option<I2C>,
     address: u8,
-    logger: Option<&'a mut L>,
     clear_on_init: bool,
 }
 
-impl<'a, I2C, L, E> Sh1107gBuilder<'a, I2C, L>
+impl<I2C, E> Sh1107gBuilder<I2C>
 where
     I2C: embedded_hal::i2c::I2c<Error = E>,
-    L: Logger + 'a,
     E: embedded_hal::i2c::Error,
 {
-    pub fn new(i2c: I2C, logger: &'a mut L) -> Self {
+    pub fn new(i2c: I2C) -> Self {
         Self {
             i2c: Some(i2c),
             address: 0x3C,
-            logger: Some(logger),
             clear_on_init: false,
         }
     }
@@ -107,11 +81,10 @@ where
         self
     }
 
-    pub fn build(mut self) -> Sh1107g<'a, I2C, L> {
+    pub fn build(mut self) -> Sh1107g<I2C> {
         let mut display = Sh1107g::new(
             self.i2c.take().expect("I2C must be set"),
             self.address,
-            self.logger,
         );
         if self.clear_on_init {
             display.clear_buffer();
@@ -121,10 +94,9 @@ where
 }
 
 
-impl<'a, I2C, L, E> Dimensions for Sh1107g<'a, I2C, L>
+impl<I2C, E> Dimensions for Sh1107g<I2C>
 where
     I2C: embedded_hal::i2c::I2c<Error = E>,
-    L: Logger + 'a,
     E: embedded_hal::i2c::Error,
 {
     fn bounding_box(&self) -> Rectangle {
@@ -132,10 +104,9 @@ where
     }
 }
 
-impl<'a, I2C, L, E> DrawTarget for Sh1107g<'a, I2C, L>
+impl<I2C, E> DrawTarget for Sh1107g<I2C>
 where
     I2C: embedded_hal::i2c::I2c<Error = E>,
-    L: Logger + 'a,
     E: embedded_hal::i2c::Error,
 
 {

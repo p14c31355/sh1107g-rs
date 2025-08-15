@@ -1,7 +1,5 @@
 // src/async_.rs
 //! async
-#[cfg(feature = "debug_log")]
-use dvcdbg::logger::Logger;
 
 #[cfg(feature = "async_")]
 use crate::error::{Sh1107gError, BuilderError};
@@ -15,17 +13,16 @@ use core::result::{Result, Result::Ok};
 // `Sh1107gBuilder` の impl ブロックのジェネリクスを修正
 // `'a` と `L` を型パラメータとして明示的に指定
 #[cfg(feature = "async_")]
-impl<'a, I2C, L, E> Sh1107gBuilder<'a, I2C, L>
+impl<I2C, E> Sh1107gBuilder<I2C>
 where
-    I2C: embedded_hal_async::i2c::I2c<Error = E>, // 非同期版I2Cトレイト
-    L: Logger + 'a,
+    I2C: embedded_hal_async::i2c::I2c<Error = E>,
     E: core::fmt::Debug,
     Sh1107gError<E>: From<E>,
 {
-    pub async fn build_async(self) -> Result<Sh1107g<'a, I2C, L>, Sh1107gError<E>>{
+    pub async fn build_async(self) -> Result<Sh1107g<I2C>, Sh1107gError<E>>{
         let i2c = self.i2c.ok_or(Sh1107gError::Builder(BuilderError::NoI2cConnected))?;
 
-        let mut oled = Sh1107g::new(i2c, self.address, self.logger);
+        let mut oled = Sh1107g::new(i2c, self.address);
 
         if let Err(_e) = oled.init_async().await {
             return Err(Sh1107gError::Builder(BuilderError::InitFailed));
@@ -37,32 +34,38 @@ where
 
 // `Sh1107g` の impl ブロックのジェネリクスを修正
 #[cfg(feature = "async_")]
-impl<'a, I2C, L, E> Sh1107g<'a, I2C, L>
+impl<I2C, E> Sh1107g<I2C>
 where
-    I2C: embedded_hal_async::i2c::I2c<Error = E>, // 非同期版I2Cトレイト
-    L: Logger + 'a,
+    I2C: embedded_hal_async::i2c::I2c<Error = E>,
     E: core::fmt::Debug,
 {
     async fn send_cmd_async(&mut self, cmd: u8) -> Result<(), E> {
-        #[cfg(feature = "debug_log")]
-        if let Some(logger) = self.logger.as_mut() {
-            use core::fmt::Write;
-            use heapless::String;
-            let mut msg = String::<16>::new();
-            let _ = write!(&mut msg, "CMD = 0x{:02X}", cmd);
-            (*logger).log(&msg);
-        }
-
         let payload = [0x80, cmd];
         self.i2c.write(self.address, &payload).await
     }
 
     pub async fn init_async(&mut self) -> Result<(), Sh1107gError<E>>{
-        let init_cmds: &[u8] = &[
-            0xAE, 0x40, 0x20, 0x02, 0x81, 0x80, 0xA0, 0xA4,
-            0xA6, 0xA8, 0x7F, 0xD3, 0x60, 0xD5, 0x51, 0xC0,
-            0xD9, 0x22, 0xDA, 0x12, 0xDB, 0x35, 0xAD, 0x8B,
-            0xAF,
+        use crate::cmds::*;
+
+        // INIT_SEQUENCE を &[&[u8]] の形で定義
+        let init_cmds: &[&[u8]] = &[
+            &[DisplayPower::Off as u8],
+            &SetStartLine(0x00).to_bytes(),
+            &Contrast(0x2F).to_bytes(),
+            &[SegmentRemap::Remap as u8],
+            &[ComOutputScanDirection::Normal as u8],
+            &[EntireDisplay::Resume as u8],
+            &[Invert::Normal as u8],
+            &MultiplexRatio(0x7F).to_bytes(),
+            &SetDisplayOffset(0x60).to_bytes(),
+            // &SetComPins(0x12).to_bytes(),
+            // Since it is set for the IC at the factory, 
+            // it does not need to be explicitly specified during initialisation.
+            &SetClockDiv { divide_ratio: 0x01, oscillator_freq: 0x01 }.to_bytes(),
+            &PreChargePeriod(0x22).to_bytes(),
+            &VcomhDeselectLevel(0x35).to_bytes(),
+            &ChargePump(true).to_bytes(),
+            &[DisplayPower::On as u8],
         ];
 
         let mut payload = heapless::Vec::<u8, 40>::new();
@@ -77,11 +80,6 @@ where
         self.i2c.write(self.address, &payload).await.map_err(|e| {
             Sh1107gError::I2cError(e)
         })?;
-
-        #[cfg(feature = "debug_log")]
-        if let Some(logger) = self.logger.as_mut() {
-            // log_init_sequence(*logger);
-        }
 
         Ok(())
     }
