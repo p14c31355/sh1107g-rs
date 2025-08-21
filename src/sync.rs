@@ -71,20 +71,19 @@ where
         let page_width = DISPLAY_WIDTH as usize;
 
         for page in 0..page_count {
-            // ページアドレス + コラムアドレス
-            self.send_cmd(0xB0 + page as u8)?; // ページアドレス
-            self.send_cmd(0x00)?;              // 下位コラムアドレス
-            self.send_cmd(0x10)?;              // 上位コラムアドレス
+            self.send_cmd(0xB0 + page as u8)?;
+            self.send_cmd(0x00)?;
+            self.send_cmd(0x10)?;
 
             let start = page * page_width;
             let end = start + page_width;
 
-            // バッファのページスライスを直接参照
-            let page_slice = &self.buffer[start..end];
+            // immutable borrow を作らずに所有権コピー
+            let mut page_data: heapless::Vec<u8, {DISPLAY_WIDTH as usize}> = 
+                heapless::Vec::from_slice(&self.buffer[start..end])
+                    .map_err(|_| Sh1107gError::PayloadOverflow)?;
 
-            // immutable borrow を避けるため直接 chunks() に渡す
-            for chunk in self.buffer[start..end].chunks(64) {
-                // chunks() のアイテムは &[u8] なので OK
+            for chunk in page_data.chunks() {
                 self.send(0x40, chunk)?;
             }
         }
