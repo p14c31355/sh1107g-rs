@@ -82,9 +82,10 @@ where
             // バッファのページスライスを直接参照
             let page_slice = &self.buffer[start..end];
 
-            // 64 バイトずつに分割して送信
-            for chunk in page_slice.chunks(64) {
-                self.send(0x40, chunk)?; // データ送信
+            // immutable borrow を避けるため直接 chunks() に渡す
+            for chunk in self.buffer[start..end].chunks(64) {
+                // chunks() のアイテムは &[u8] なので OK
+                self.send(0x40, chunk)?;
             }
         }
 
