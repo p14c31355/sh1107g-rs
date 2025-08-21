@@ -67,25 +67,24 @@ where
     pub fn flush(&mut self) -> Result<(), Sh1107gError<E>> {
         use crate::{DISPLAY_HEIGHT, DISPLAY_WIDTH};
 
-        let page_count = DISPLAY_HEIGHT as usize / 8; // 8ピクセルごとにページ
-        let page_width = DISPLAY_WIDTH as usize;      // 128
+        let page_count = DISPLAY_HEIGHT as usize / 8;
+        let page_width = DISPLAY_WIDTH as usize;
 
         for page in 0..page_count {
-            self.send_cmd(0xB0 + page as u8)?;
-            self.send_cmd(0x00)?;
-            self.send_cmd(0x10)?;
+            // ページアドレスセットコマンド
+            self.send_cmd(0xB0 + page as u8)?; // ページアドレス
+            self.send_cmd(0x00)?;             // 下位列アドレス
+            self.send_cmd(0x10)?;             // 上位列アドレス
 
             let start = page * page_width;
             let end = start + page_width;
+            // page_data を heapless::Vec にコピーして、self.buffer への不変参照をすぐに解放する
+            let mut page_data_copy = heapless::Vec::<u8, {DISPLAY_WIDTH as usize}>::new();
+            page_data_copy.extend_from_slice(&self.buffer[start..end]).map_err(|_| Sh1107gError::PayloadOverflow)?;
 
-            // buffer の該当ページを heapless::Vec にコピー
-            let page_data: heapless::Vec<u8, {DISPLAY_WIDTH as usize}> = 
-                heapless::Vec::from_slice(&self.buffer[start..end])
-                    .map_err(|_| Sh1107gError::PayloadOverflow)?;
-
-            // 64バイトずつ送信
-            for chunk in page_data.chunks(64) {
-                self.send(0x40, chunk)?;
+            // データ送信は 64 バイトごとに分割
+            for chunk in page_data_copy.chunks(64) {
+                self.send(0x40, chunk)?; // データ送信
             }
         }
 
