@@ -67,8 +67,8 @@ where
     pub fn flush(&mut self) -> Result<(), Sh1107gError<E>> {
         use crate::{DISPLAY_HEIGHT, DISPLAY_WIDTH};
 
-        let page_count = DISPLAY_HEIGHT as usize / 8;
-        let page_width = DISPLAY_WIDTH as usize;
+        let page_count = DISPLAY_HEIGHT as usize / 8; // 8ピクセルごとにページ
+        let page_width = DISPLAY_WIDTH as usize;      // 128
 
         for page in 0..page_count {
             self.send_cmd(0xB0 + page as u8)?;
@@ -78,12 +78,13 @@ where
             let start = page * page_width;
             let end = start + page_width;
 
-            // immutable borrow を作らずに所有権コピー
-            let mut page_data: heapless::Vec<u8, {DISPLAY_WIDTH as usize}> = 
+            // buffer の該当ページを heapless::Vec にコピー
+            let page_data: heapless::Vec<u8, {DISPLAY_WIDTH as usize}> = 
                 heapless::Vec::from_slice(&self.buffer[start..end])
                     .map_err(|_| Sh1107gError::PayloadOverflow)?;
 
-            for chunk in page_data.chunks() {
+            // 64バイトずつ送信
+            for chunk in page_data.chunks(64) {
                 self.send(0x40, chunk)?;
             }
         }
