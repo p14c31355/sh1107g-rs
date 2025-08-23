@@ -49,18 +49,11 @@ where
             &ChargePump(true).to_bytes(),
             &[DisplayPower::On as u8],
         ];
+        
+ for cmd_bytes in init_cmds.iter() {
+            // 1コマンドずつ送信
+            self.send(0x80, cmd_bytes)?;}
 
-        let mut payload = heapless::Vec::<u8, 64>::new();
-        // コントロールバイト 0x00 はコマンド続き送信の意味
-        payload.push(0x00).map_err(|_| Sh1107gError::PayloadOverflow)?;
-
-        // コマンド配列を展開してpayloadに連結
-        for cmd_bytes in init_cmds.iter() {
-            payload.extend_from_slice(cmd_bytes).map_err(|_| Sh1107gError::PayloadOverflow)?;
-        }
-
-        let res = self.i2c.write(self.address, &payload);
-        res.map_err(Sh1107gError::I2cError)?;
         Ok(())
     }
 

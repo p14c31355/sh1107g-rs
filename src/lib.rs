@@ -25,7 +25,7 @@ use core::{
 
 pub const DISPLAY_WIDTH: u32 = 128;
 pub const DISPLAY_HEIGHT: u32 = 128;
-pub const BUFFER_SIZE: usize = (DISPLAY_WIDTH * DISPLAY_HEIGHT / 8) as usize;
+pub const BUFFER_SIZE: usize = DISPLAY_WIDTH as usize * DISPLAY_HEIGHT as usize / 8;
 
 pub struct Sh1107g<I2C> {
     pub(crate) i2c: I2C,
@@ -82,10 +82,8 @@ where
     }
 
     pub fn build(mut self) -> Sh1107g<I2C> {
-        let mut display = Sh1107g::new(
-            self.i2c.take().expect("I2C must be set"),
-            self.address,
-        );
+        let i2c = self.i2c.take().expect("I2C must be set");
+        let mut display = Sh1107g::new(i2c, self.address);
         if self.clear_on_init {
             display.clear_buffer();
         }
