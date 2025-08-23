@@ -6,9 +6,6 @@ pub mod error;
 #[cfg(feature = "sync")]
 pub mod sync;
 
-#[cfg(feature = "async_")]
-pub mod async_;
-
 use embedded_graphics_core::{
     draw_target::DrawTarget,
     geometry::{Dimensions, Point, Size},
@@ -16,19 +13,14 @@ use embedded_graphics_core::{
     primitives::Rectangle,
     Pixel,
 };
-
-use core::{
-    convert::Infallible,
-    result::Result,
-    option::Option::{self, Some},
-};
+use core::{convert::Infallible, result::Result};
 
 pub const DISPLAY_WIDTH: usize = 128;
 pub const DISPLAY_HEIGHT: usize = 128;
 pub const PAGE_HEIGHT: usize = 8;
 pub const COLUMN_OFFSET: usize = 2;
 pub const I2C_MAX_WRITE: usize = 32;
-pub const BUFFER_SIZE: usize = DISPLAY_WIDTH as usize * DISPLAY_HEIGHT as usize / 8;
+pub const BUFFER_SIZE: usize = DISPLAY_WIDTH * DISPLAY_HEIGHT / 8;
 
 pub struct Sh1107g<I2C> {
     pub(crate) i2c: I2C,
@@ -42,21 +34,19 @@ where
     E: embedded_hal::i2c::Error,
 {
     pub fn new(i2c: I2C, address: u8) -> Self {
-    Self {
-        i2c,
-        address,
-        buffer: [0u8; BUFFER_SIZE],
+        Self {
+            i2c,
+            address,
+            buffer: [0u8; BUFFER_SIZE],
+        }
     }
-}
 
     pub fn buffer_mut(&mut self) -> &mut [u8] {
         &mut self.buffer
     }
 
     pub fn clear_buffer(&mut self) {
-        for b in self.buffer.iter_mut() {
-            *b = 0;
-        }
+        self.buffer.iter_mut().for_each(|b| *b = 0);
     }
 }
 
@@ -94,7 +84,6 @@ where
     }
 }
 
-
 impl<I2C, E> Dimensions for Sh1107g<I2C>
 where
     I2C: embedded_hal::i2c::I2c<Error = E>,
@@ -109,7 +98,6 @@ impl<I2C, E> DrawTarget for Sh1107g<I2C>
 where
     I2C: embedded_hal::i2c::I2c<Error = E>,
     E: embedded_hal::i2c::Error,
-
 {
     type Color = BinaryColor;
     type Error = Infallible;
@@ -123,12 +111,8 @@ where
                 continue;
             }
 
-            let byte_index = (x as usize) + (y as usize / 8) * (DISPLAY_WIDTH as usize);
+            let byte_index = (x as usize) + (y as usize / 8) * DISPLAY_WIDTH;
             let bit_mask = 1 << (y % 8);
-
-            if byte_index >= BUFFER_SIZE {
-                continue;
-            }
 
             match color {
                 BinaryColor::On => self.buffer[byte_index] |= bit_mask,

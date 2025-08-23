@@ -8,12 +8,12 @@ where
     I2C: I2c<Error = E>,
     E: Debug + embedded_hal::i2c::Error,
 {
-    /// 共通I2C送信関数
-    /// control: 0x80 = コマンド, 0x40 = データ
+    /// 共通I2C送信
     fn send(&mut self, control: u8, data: &[u8]) -> Result<(), Sh1107gError<E>> {
-        let mut payload = Vec::<u8, 32>::new(); // UnoのI2C制限
+        let mut payload = Vec::<u8, { crate::I2C_MAX_WRITE }>::new();
         payload.push(control).map_err(|_| Sh1107gError::PayloadOverflow)?;
         payload.extend_from_slice(data).map_err(|_| Sh1107gError::PayloadOverflow)?;
+
         self.i2c.write(self.address, &payload).map_err(Sh1107gError::I2cError)
     }
 
@@ -22,10 +22,9 @@ where
         self.send(0x80, &[cmd])
     }
 
-    /// 初期化コマンド送信
+    /// 初期化
     pub fn init(&mut self) -> Result<(), Sh1107gError<E>> {
         use crate::cmds::*;
-
         let init_cmds: &[&[u8]] = &[
             &[DisplayPower::Off as u8],
             &SetStartLine(0x00).to_bytes(),
@@ -45,44 +44,32 @@ where
             &ChargePump(true).to_bytes(),
             &[DisplayPower::On as u8],
         ];
-
-        for cmd_bytes in init_cmds {
-            self.send(0x80, cmd_bytes)?;
-        }
-
+        for cmd_bytes in init_cmds { self.send(0x80, cmd_bytes)?; }
         Ok(())
     }
 
-    /// バッファをOLEDに送信（ページ単位）
+    /// バッファ送信（ページ単位）
     pub fn flush(&mut self) -> Result<(), Sh1107gError<E>> {
-        use crate::{DISPLAY_WIDTH, DISPLAY_HEIGHT, I2C_MAX_WRITE};
+        use crate::{DISPLAY_WIDTH, DISPLAY_HEIGHT};
 
-        let page_count = (DISPLAY_HEIGHT / 8) as usize;
-        let page_width = DISPLAY_WIDTH as usize;
+        let page_count = DISPLAY_HEIGHT / 8;
+        let page_width = DISPLAY_WIDTH;
 
         for page in 0..page_count {
-            // ページアドレス設定
             self.send_cmd(0xB0 + page as u8)?;
-            self.send_cmd(0x00)?; // 列下位
-            self.send_cmd(0x10)?; // 列上位
+            self.send_cmd(0x00)?;
+            self.send_cmd(0x10)?;
 
             let start = page * page_width;
             let end = start + page_width;
 
-            // heapless::Vec にコピーして同時借用回避
-            let mut page_data_copy = heapless::Vec::<u8, {DISPLAY_WIDTH as usize}>::new();
-            page_data_copy.extend_from_slice(&self.buffer[start..end])
-                .map_err(|_| Sh1107gError::PayloadOverflow)?;
+            let mut page_data_copy = Vec::<u8, { DISPLAY_WIDTH }>::new();
+            page_data_copy.extend_from_slice(&self.buffer[start..end]).map_err(|_| Sh1107gError::PayloadOverflow)?;
 
-            // 32バイトごとに送信
-            for chunk in page_data_copy.chunks(I2C_MAX_WRITE - 1) {
-                let mut data = heapless::Vec::<u8, I2C_MAX_WRITE>::new();
-                data.push(0x40).ok(); // データ先頭
-                data.extend_from_slice(chunk).ok();
-                self.i2c.write(self.address, &data).map_err(Sh1107gError::I2cError)?;
+            for chunk in page_data_copy.chunks(crate::I2C_MAX_WRITE - 1) {
+                self.send(0x40, chunk)?;
             }
         }
-
         Ok(())
     }
 }
