@@ -2,7 +2,6 @@
 
 pub mod cmds;
 pub mod error;
-
 #[cfg(feature = "sync")]
 pub mod sync;
 
@@ -13,12 +12,13 @@ use embedded_graphics_core::{
     primitives::Rectangle,
     Pixel,
 };
-use core::convert::Infallible;
 
 pub const DISPLAY_WIDTH: usize = 128;
 pub const DISPLAY_HEIGHT: usize = 128;
-pub const BUFFER_SIZE: usize = DISPLAY_WIDTH * DISPLAY_HEIGHT / 8;
+pub const PAGE_HEIGHT: usize = 8;
+pub const COLUMN_OFFSET: usize = 2;
 pub const I2C_MAX_WRITE: usize = 32;
+pub const BUFFER_SIZE: usize = DISPLAY_WIDTH * DISPLAY_HEIGHT / 8;
 
 pub struct Sh1107g<I2C> {
     pub(crate) i2c: I2C,
@@ -88,21 +88,20 @@ where
     E: embedded_hal::i2c::Error,
 {
     fn bounding_box(&self) -> Rectangle {
-        Rectangle::new(Point::new(0, 0), Size::new(DISPLAY_WIDTH as u32, DISPLAY_HEIGHT as u32))
+        Rectangle::new(Point::new(0,0), Size::new(DISPLAY_WIDTH as u32, DISPLAY_HEIGHT as u32))
     }
 }
 
 impl<I2C, E> DrawTarget for Sh1107g<I2C>
 where
-    I2C: embedded_hal::i2c::I2c<Error = E>,
+    I2C: embedded_hal::i2c::I2c<Error=E>,
     E: embedded_hal::i2c::Error,
 {
     type Color = BinaryColor;
-    type Error = Infallible;
+    type Error = core::convert::Infallible;
 
     fn draw_iter<PIXELS>(&mut self, pixels: PIXELS) -> Result<(), Self::Error>
-    where
-        PIXELS: IntoIterator<Item = Pixel<Self::Color>>,
+    where PIXELS: IntoIterator<Item=Pixel<Self::Color>>
     {
         for Pixel(Point { x, y }, color) in pixels {
             if x < 0 || x >= DISPLAY_WIDTH as i32 || y < 0 || y >= DISPLAY_HEIGHT as i32 {
@@ -119,10 +118,7 @@ where
     }
 
     fn clear(&mut self, color: Self::Color) -> Result<(), Self::Error> {
-        let fill_byte = match color {
-            BinaryColor::On => 0xFF,
-            BinaryColor::Off => 0x00,
-        };
+        let fill_byte = match color { BinaryColor::On => 0xFF, BinaryColor::Off => 0x00 };
         self.buffer.iter_mut().for_each(|b| *b = fill_byte);
         Ok(())
     }
