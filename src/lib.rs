@@ -13,14 +13,12 @@ use embedded_graphics_core::{
     primitives::Rectangle,
     Pixel,
 };
-use core::{convert::Infallible, result::Result};
+use core::convert::Infallible;
 
 pub const DISPLAY_WIDTH: usize = 128;
 pub const DISPLAY_HEIGHT: usize = 128;
-pub const PAGE_HEIGHT: usize = 8;
-pub const COLUMN_OFFSET: usize = 2;
-pub const I2C_MAX_WRITE: usize = 32;
 pub const BUFFER_SIZE: usize = DISPLAY_WIDTH * DISPLAY_HEIGHT / 8;
+pub const I2C_MAX_WRITE: usize = 32;
 
 pub struct Sh1107g<I2C> {
     pub(crate) i2c: I2C,
@@ -75,7 +73,7 @@ where
     }
 
     pub fn build(mut self) -> Sh1107g<I2C> {
-        let i2c = self.i2c.take().expect("I2C must be set");
+        let i2c = self.i2c.take().unwrap();
         let mut display = Sh1107g::new(i2c, self.address);
         if self.clear_on_init {
             display.clear_buffer();
@@ -110,10 +108,8 @@ where
             if x < 0 || x >= DISPLAY_WIDTH as i32 || y < 0 || y >= DISPLAY_HEIGHT as i32 {
                 continue;
             }
-
             let byte_index = (x as usize) + (y as usize / 8) * DISPLAY_WIDTH;
             let bit_mask = 1 << (y % 8);
-
             match color {
                 BinaryColor::On => self.buffer[byte_index] |= bit_mask,
                 BinaryColor::Off => self.buffer[byte_index] &= !bit_mask,
