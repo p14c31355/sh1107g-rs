@@ -1,7 +1,6 @@
 use heapless::Vec;
 use core::fmt::Debug;
-
-use crate::{error::Sh1107gError,  Sh1107g};
+use crate::{Sh1107g, error::Sh1107gError};
 use embedded_hal::i2c::I2c;
 
 impl<I2C, E> Sh1107g<I2C>
@@ -9,27 +8,23 @@ where
     I2C: I2c<Error = E>,
     E: Debug + embedded_hal::i2c::Error,
 {
-    /// 共通I2C送信＋ロギング関数。制御バイト（0x80, 0x40など）＋データ配列を送る。
+    /// 共通I2C送信関数
     fn send(&mut self, control: u8, data: &[u8]) -> Result<(), Sh1107gError<E>> {
-        let mut payload = Vec::<u8, 65>::new();
+        let mut payload = Vec::<u8, 65>::new(); // 64バイト制限に対応
         payload.push(control).map_err(|_| Sh1107gError::PayloadOverflow)?;
         payload.extend_from_slice(data).map_err(|_| Sh1107gError::PayloadOverflow)?;
-
-        let res = self.i2c.write(self.address, &payload);
-
-        res.map_err(Sh1107gError::I2cError)
+        self.i2c.write(self.address, &payload).map_err(Sh1107gError::I2cError)
     }
 
-    /// 単一コマンド送信は制御バイト0x80でsendを呼ぶだけに。
+    /// 単一コマンド送信
     pub fn send_cmd(&mut self, cmd: u8) -> Result<(), Sh1107gError<E>> {
         self.send(0x80, &[cmd])
     }
 
-    /// 初期化コマンド送信（cmds.rsのINIT_SEQUENCEを使う想定）
+    /// 初期化コマンド送信
     pub fn init(&mut self) -> Result<(), Sh1107gError<E>> {
         use crate::cmds::*;
 
-        // INIT_SEQUENCE を &[&[u8]] の形で定義
         let init_cmds: &[&[u8]] = &[
             &[DisplayPower::Off as u8],
             &SetStartLine(0x00).to_bytes(),
@@ -49,34 +44,33 @@ where
             &ChargePump(true).to_bytes(),
             &[DisplayPower::On as u8],
         ];
-        
- for cmd_bytes in init_cmds.iter() {
-            // 1コマンドずつ送信
-            self.send(0x80, cmd_bytes)?;}
+
+        for cmd_bytes in init_cmds {
+            self.send(0x80, cmd_bytes)?;
+        }
 
         Ok(())
     }
 
+    /// バッファをOLEDに送信（ページ単位）
     pub fn flush(&mut self) -> Result<(), Sh1107gError<E>> {
-        use crate::{DISPLAY_HEIGHT, DISPLAY_WIDTH};
+        use crate::{DISPLAY_WIDTH, DISPLAY_HEIGHT};
 
-        let page_count = DISPLAY_HEIGHT as usize / 8;
+        let page_count = (DISPLAY_HEIGHT / 8) as usize;
         let page_width = DISPLAY_WIDTH as usize;
 
         for page in 0..page_count {
-            // ページアドレスセットコマンド
-            self.send_cmd(0xB0 + page as u8)?; // ページアドレス
-            self.send_cmd(0x00)?;             // 下位列アドレス
-            self.send_cmd(0x10)?;             // 上位列アドレス
+            // ページアドレスセット
+            self.send_cmd(0xB0 + page as u8)?;
+            self.send_cmd(0x00)?; // 列下位
+            self.send_cmd(0x10)?; // 列上位
 
             let start = page * page_width;
             let end = start + page_width;
-            // page_data を heapless::Vec にコピーして、self.buffer への不変参照をすぐに解放する
-            let mut page_data_copy = heapless::Vec::<u8, {DISPLAY_WIDTH as usize}>::new();
-            page_data_copy.extend_from_slice(&self.buffer[start..end]).map_err(|_| Sh1107gError::PayloadOverflow)?;
+            let page_data = &self.buffer[start..end];
 
             // データ送信は 64 バイトごとに分割
-            for chunk in page_data_copy.chunks(64) {
+            for chunk in page_data.chunks(64) {
                 self.send(0x40, chunk)?; // データ送信
             }
         }
