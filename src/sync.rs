@@ -59,22 +59,23 @@ where
         let page_count = DISPLAY_HEIGHT / 8;
 
         for page in 0..page_count {
-            self.send_cmd(0xB0 + page as u8)?; // ページ
-            self.send_cmd(0x00 + COLUMN_OFFSET as u8)?; // 下位列
-            self.send_cmd(0x10)?; // 上位列
+            self.send_cmd(0xB0 + page as u8)?;
+            self.send_cmd(0x00 + COLUMN_OFFSET as u8)?;
+            self.send_cmd(0x10)?;
 
             let start = page * DISPLAY_WIDTH;
             let end = start + DISPLAY_WIDTH;
-            let page_data = &self.buffer[start..end];
 
-            // 32バイト単位で送る
-            for chunk in page_data.chunks(I2C_MAX_WRITE - 1) {
-                // chunk は &[u8] なのでそのまま send に渡せる
+            // コピーを作ることで immutable borrow を避ける
+            let mut page_buf = heapless::Vec::<u8, { DISPLAY_WIDTH }>::new();
+            page_buf.extend_from_slice(&self.buffer[start..end])
+                .map_err(|_| Sh1107gError::PayloadOverflow)?;
+
+            for chunk in page_buf.chunks(I2C_MAX_WRITE - 1) {
                 self.send(0x40, chunk)?;
             }
         }
 
         Ok(())
     }
-
 }
