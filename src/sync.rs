@@ -10,14 +10,10 @@ where
 {
     /// 共通I2C送信関数
     fn send(&mut self, control: u8, data: &[u8]) -> Result<(), Sh1107gError<E>> {
-        // UNO I2Cバッファ制限32バイトを考慮
-        for chunk in data.chunks(crate::I2C_MAX_WRITE - 1) {
-            let mut payload: Vec<u8, {crate::I2C_MAX_WRITE}> = Vec::new();
-            payload.push(control).map_err(|_| Sh1107gError::PayloadOverflow)?;
-            payload.extend_from_slice(chunk).map_err(|_| Sh1107gError::PayloadOverflow)?;
-            self.i2c.write(self.address, &payload).map_err(Sh1107gError::I2cError)?;
-        }
-        Ok(())
+        let mut payload = Vec::<u8, 32>::new(); // UNO I2C制限
+        payload.push(control).map_err(|_| Sh1107gError::PayloadOverflow)?;
+        payload.extend_from_slice(data).map_err(|_| Sh1107gError::PayloadOverflow)?;
+        self.i2c.write(self.address, &payload).map_err(Sh1107gError::I2cError)
     }
 
     /// 単一コマンド送信
@@ -25,7 +21,7 @@ where
         self.send(0x80, &[cmd])
     }
 
-    /// 初期化コマンド送信
+    /// 初期化コマンド送信（UNO用安定版）
     pub fn init(&mut self) -> Result<(), Sh1107gError<E>> {
         use crate::cmds::*;
 
@@ -53,25 +49,24 @@ where
         Ok(())
     }
 
-    /// バッファをOLEDに送信（ページ単位）
+    /// バッファをOLEDに送信（ページ単位、32バイト分割）
     pub fn flush(&mut self) -> Result<(), Sh1107gError<E>> {
-        use crate::{DISPLAY_WIDTH, DISPLAY_HEIGHT, COLUMN_OFFSET, I2C_MAX_WRITE};
+        use crate::{DISPLAY_WIDTH, DISPLAY_HEIGHT, I2C_MAX_WRITE};
+
         let page_count = DISPLAY_HEIGHT / 8;
+        let page_width = DISPLAY_WIDTH;
 
         for page in 0..page_count {
-            self.send_cmd(0xB0 + page as u8)?;
-            self.send_cmd(0x00 + COLUMN_OFFSET as u8)?;
-            self.send_cmd(0x10)?;
+            self.send_cmd(0xB0 + page as u8)?; // ページアドレス
+            self.send_cmd(0x00)?;              // 列下位
+            self.send_cmd(0x10)?;              // 列上位
 
-            let start = page * DISPLAY_WIDTH;
-            let end = start + DISPLAY_WIDTH;
-
-            // コピーを作ることで immutable borrow を避ける
-            let mut page_buf = heapless::Vec::<u8, { DISPLAY_WIDTH }>::new();
-            page_buf.extend_from_slice(&self.buffer[start..end])
+            // mutable で Vec にコピーして chunk ごとに送信
+            let mut page_vec = Vec::<u8, {DISPLAY_WIDTH}>::new();
+            page_vec.extend_from_slice(&self.buffer[page*page_width..(page+1)*page_width])
                 .map_err(|_| Sh1107gError::PayloadOverflow)?;
 
-            for chunk in page_buf.chunks(I2C_MAX_WRITE - 1) {
+            for chunk in page_vec.chunks(I2C_MAX_WRITE - 1) {
                 self.send(0x40, chunk)?;
             }
         }
