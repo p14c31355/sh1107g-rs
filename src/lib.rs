@@ -23,8 +23,11 @@ use core::{
     option::Option::{self, Some},
 };
 
-pub const DISPLAY_WIDTH: u32 = 128;
-pub const DISPLAY_HEIGHT: u32 = 128;
+pub const DISPLAY_WIDTH: usize = 128;
+pub const DISPLAY_HEIGHT: usize = 128;
+pub const PAGE_HEIGHT: usize = 8;
+pub const COLUMN_OFFSET: usize = 2;
+pub const I2C_MAX_WRITE: usize = 32;
 pub const BUFFER_SIZE: usize = DISPLAY_WIDTH as usize * DISPLAY_HEIGHT as usize / 8;
 
 pub struct Sh1107g<I2C> {
@@ -98,7 +101,7 @@ where
     E: embedded_hal::i2c::Error,
 {
     fn bounding_box(&self) -> Rectangle {
-        Rectangle::new(Point::new(0, 0), Size::new(DISPLAY_WIDTH, DISPLAY_HEIGHT))
+        Rectangle::new(Point::new(0, 0), Size::new(DISPLAY_WIDTH as u32, DISPLAY_HEIGHT as u32))
     }
 }
 

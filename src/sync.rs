@@ -9,8 +9,9 @@ where
     E: Debug + embedded_hal::i2c::Error,
 {
     /// 共通I2C送信関数
+    /// control: 0x80 = コマンド, 0x40 = データ
     fn send(&mut self, control: u8, data: &[u8]) -> Result<(), Sh1107gError<E>> {
-        let mut payload = Vec::<u8, 32>::new(); // 64バイト制限に対応
+        let mut payload = Vec::<u8, 32>::new(); // UnoのI2C制限
         payload.push(control).map_err(|_| Sh1107gError::PayloadOverflow)?;
         payload.extend_from_slice(data).map_err(|_| Sh1107gError::PayloadOverflow)?;
         self.i2c.write(self.address, &payload).map_err(Sh1107gError::I2cError)
@@ -54,13 +55,13 @@ where
 
     /// バッファをOLEDに送信（ページ単位）
     pub fn flush(&mut self) -> Result<(), Sh1107gError<E>> {
-        use crate::{DISPLAY_WIDTH, DISPLAY_HEIGHT};
+        use crate::{DISPLAY_WIDTH, DISPLAY_HEIGHT, I2C_MAX_WRITE};
 
         let page_count = (DISPLAY_HEIGHT / 8) as usize;
         let page_width = DISPLAY_WIDTH as usize;
 
         for page in 0..page_count {
-            // ページアドレスセット
+            // ページアドレス設定
             self.send_cmd(0xB0 + page as u8)?;
             self.send_cmd(0x00)?; // 列下位
             self.send_cmd(0x10)?; // 列上位
@@ -68,14 +69,17 @@ where
             let start = page * page_width;
             let end = start + page_width;
 
-            // ここで heapless::Vec にコピーして不変参照を使わない
-            let mut page_data_copy = heapless::Vec::<u8, { DISPLAY_WIDTH as usize }>::new();
-            page_data_copy
-                .extend_from_slice(&self.buffer[start..end])
+            // heapless::Vec にコピーして同時借用回避
+            let mut page_data_copy = heapless::Vec::<u8, {DISPLAY_WIDTH as usize}>::new();
+            page_data_copy.extend_from_slice(&self.buffer[start..end])
                 .map_err(|_| Sh1107gError::PayloadOverflow)?;
 
-            for chunk in page_data_copy.chunks(64) {
-                self.send(0x40, chunk)?; // データ送信
+            // 32バイトごとに送信
+            for chunk in page_data_copy.chunks(I2C_MAX_WRITE - 1) {
+                let mut data = heapless::Vec::<u8, I2C_MAX_WRITE>::new();
+                data.push(0x40).ok(); // データ先頭
+                data.extend_from_slice(chunk).ok();
+                self.i2c.write(self.address, &data).map_err(Sh1107gError::I2cError)?;
             }
         }
 
