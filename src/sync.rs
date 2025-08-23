@@ -10,7 +10,7 @@ where
 {
     /// 共通I2C送信関数
     fn send(&mut self, control: u8, data: &[u8]) -> Result<(), Sh1107gError<E>> {
-        let mut payload = Vec::<u8, 65>::new(); // 64バイト制限に対応
+        let mut payload = Vec::<u8, 32>::new(); // 64バイト制限に対応
         payload.push(control).map_err(|_| Sh1107gError::PayloadOverflow)?;
         payload.extend_from_slice(data).map_err(|_| Sh1107gError::PayloadOverflow)?;
         self.i2c.write(self.address, &payload).map_err(Sh1107gError::I2cError)
@@ -67,10 +67,14 @@ where
 
             let start = page * page_width;
             let end = start + page_width;
-            let page_data = &self.buffer[start..end];
 
-            // データ送信は 64 バイトごとに分割
-            for chunk in page_data.chunks(64) {
+            // ここで heapless::Vec にコピーして不変参照を使わない
+            let mut page_data_copy = heapless::Vec::<u8, { DISPLAY_WIDTH as usize }>::new();
+            page_data_copy
+                .extend_from_slice(&self.buffer[start..end])
+                .map_err(|_| Sh1107gError::PayloadOverflow)?;
+
+            for chunk in page_data_copy.chunks(64) {
                 self.send(0x40, chunk)?; // データ送信
             }
         }
