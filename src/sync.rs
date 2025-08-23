@@ -45,18 +45,29 @@ where
     }
 
     pub fn flush(&mut self) -> Result<(), Sh1107gError<E>> {
-        let pages = crate::DISPLAY_HEIGHT/8;
-        let width = crate::DISPLAY_WIDTH;
-        for page in 0..pages {
-            self.send_cmd(0xB0 + page as u8)?;
-            self.send_cmd(0x00)?;
-            self.send_cmd(0x10)?;
-            let start = page*width;
-            let end = start+width;
-            let mut page_copy: Vec<u8, {crate::DISPLAY_WIDTH}> = Vec::new();
-            page_copy.extend_from_slice(&self.buffer[start..end]).map_err(|_|Sh1107gError::PayloadOverflow)?;
-            self.send(0x40,&page_copy)?;
+    const CHUNK_SIZE: usize = 32;
+
+    let pages = crate::DISPLAY_HEIGHT / 8;
+    let width = crate::DISPLAY_WIDTH;
+
+    for page in 0..pages {
+        self.send_cmd(0xB0 + page as u8)?;
+        self.send_cmd(0x00)?;
+        self.send_cmd(0x10)?;
+
+        let start = page * width;
+        let end = start + width;
+
+        let mut page_copy: Vec<u8, {crate::DISPLAY_WIDTH}> = Vec::new();
+        page_copy
+            .extend_from_slice(&self.buffer[start..end])
+            .map_err(|_| Sh1107gError::PayloadOverflow)?;
+
+        for chunk in page_copy.chunks(CHUNK_SIZE - 1) {
+            self.send(0x40, chunk)?;
         }
-        Ok(())
+    }
+
+    Ok(())
     }
 }
