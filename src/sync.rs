@@ -1,5 +1,5 @@
 // sync.rs
-use crate::{Sh1107g, cmds, error::Sh1107gError};
+use crate::{Sh1107g, cmds::SH1107G_INIT_CMDS, error::Sh1107gError};
 use embedded_hal::i2c::I2c;
 use heapless::Vec;
 use core::fmt::Debug;
@@ -21,20 +21,9 @@ where
     }
 
     pub fn init(&mut self) -> Result<(), Sh1107gError<E>> {
-        let init_cmds: &[&[u8]] = &[
-            cmds::DISPLAY_OFF,
-            &cmds::contrast(0x2F),
-            &cmds::set_start_line(0x00),
-            &cmds::display_offset(0x60),
-            cmds::SEGMENT_REMAP_REMAPPED,
-            cmds::COM_SCAN_NORMAL,
-            cmds::ENTIRE_DISPLAY_RESUME,
-            cmds::INVERT_NORMAL,
-            cmds::DISPLAY_ON,
-        ];
 
-        for cmd in init_cmds {
-            self.send(0x80, cmd)?;
+        for cmd in SH1107G_INIT_CMDS {
+            self.send(0x80, core::slice::from_ref(cmd))?;
         }
 
         Ok(())
