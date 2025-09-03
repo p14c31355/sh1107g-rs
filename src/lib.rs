@@ -16,7 +16,7 @@ use embedded_graphics_core::{
 pub const DISPLAY_WIDTH: usize = 128;
 pub const DISPLAY_HEIGHT: usize = 128;
 pub const PAGE_HEIGHT: usize = 8;
-pub const COLUMN_OFFSET: usize = 2;
+pub const COLUMN_OFFSET: usize = 0; // Changed for testing
 pub const I2C_MAX_WRITE: usize = 32;
 pub const BUFFER_SIZE: usize = DISPLAY_WIDTH * DISPLAY_HEIGHT / 8;
 
@@ -107,8 +107,13 @@ where
             if x < 0 || x >= DISPLAY_WIDTH as i32 || y < 0 || y >= DISPLAY_HEIGHT as i32 {
                 continue;
             }
-            let byte_index = (x as usize) + (y as usize / 8) * DISPLAY_WIDTH;
+
+            let page_idx = y as usize / 8;
+            let col_idx = x as usize;
+            let byte_index = col_idx + (page_idx * DISPLAY_WIDTH);
+
             let bit_mask = 1 << (y % 8);
+
             match color {
                 BinaryColor::On => self.buffer[byte_index] |= bit_mask,
                 BinaryColor::Off => self.buffer[byte_index] &= !bit_mask,
