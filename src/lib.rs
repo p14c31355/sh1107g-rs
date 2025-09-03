@@ -16,7 +16,7 @@ use embedded_graphics_core::{
 pub const DISPLAY_WIDTH: usize = 128;
 pub const DISPLAY_HEIGHT: usize = 128;
 pub const PAGE_HEIGHT: usize = 8;
-pub const COLUMN_OFFSET: usize = 0; // Changed for testing
+pub const COLUMN_OFFSET: usize = 2;
 pub const I2C_MAX_WRITE: usize = 32;
 pub const BUFFER_SIZE: usize = DISPLAY_WIDTH * DISPLAY_HEIGHT / 8;
 
@@ -44,22 +44,22 @@ where
     }
 
     pub fn clear_buffer(&mut self) {
-        self.buffer.iter_mut().for_each(|b| *b = 0);
+        self.buffer.fill(0x00);
     }
 }
 
-pub struct Sh1107gBuilder<I2C> {
-    i2c: Option<I2C>,
+pub struct Sh1107gBuilder<'a, I2C> {
+    i2c: Option<&'a mut I2C>,
     address: u8,
     clear_on_init: bool,
 }
 
-impl<I2C, E> Sh1107gBuilder<I2C>
+impl<'a, I2C, E> Sh1107gBuilder<'a, I2C>
 where
     I2C: embedded_hal::i2c::I2c<Error = E>,
     E: embedded_hal::i2c::Error,
 {
-    pub fn new(i2c: I2C) -> Self {
+    pub fn new(i2c: &'a mut I2C) -> Self {
         Self {
             i2c: Some(i2c),
             address: 0x3C,
@@ -67,12 +67,17 @@ where
         }
     }
 
+    pub fn with_address(mut self, address: u8) -> Self {
+        self.address = address;
+        self
+    }
+    
     pub fn clear_on_init(mut self, enable: bool) -> Self {
         self.clear_on_init = enable;
         self
     }
 
-    pub fn build(mut self) -> Sh1107g<I2C> {
+    pub fn build(mut self) -> Sh1107g<&'a mut I2C> {
         let i2c = self.i2c.take().unwrap();
         let mut display = Sh1107g::new(i2c, self.address);
         if self.clear_on_init {
@@ -88,20 +93,21 @@ where
     E: embedded_hal::i2c::Error,
 {
     fn bounding_box(&self) -> Rectangle {
-        Rectangle::new(Point::new(0,0), Size::new(DISPLAY_WIDTH as u32, DISPLAY_HEIGHT as u32))
+        Rectangle::new(Point::new(0, 0), Size::new(DISPLAY_WIDTH as u32, DISPLAY_HEIGHT as u32))
     }
 }
 
 impl<I2C, E> DrawTarget for Sh1107g<I2C>
 where
-    I2C: embedded_hal::i2c::I2c<Error=E>,
+    I2C: embedded_hal::i2c::I2c<Error = E>,
     E: embedded_hal::i2c::Error,
 {
     type Color = BinaryColor;
     type Error = core::convert::Infallible;
 
     fn draw_iter<PIXELS>(&mut self, pixels: PIXELS) -> Result<(), Self::Error>
-    where PIXELS: IntoIterator<Item=Pixel<Self::Color>>
+    where
+        PIXELS: IntoIterator<Item = Pixel<Self::Color>>,
     {
         for Pixel(Point { x, y }, color) in pixels {
             if x < 0 || x >= DISPLAY_WIDTH as i32 || y < 0 || y >= DISPLAY_HEIGHT as i32 {
@@ -121,7 +127,7 @@ where
         }
         Ok(())
     }
-
+    
     fn clear(&mut self, color: Self::Color) -> Result<(), Self::Error> {
         let fill_byte = match color { BinaryColor::On => 0xFF, BinaryColor::Off => 0x00 };
         self.buffer.iter_mut().for_each(|b| *b = fill_byte);
