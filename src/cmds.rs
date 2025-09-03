@@ -1,18 +1,35 @@
 // cmds.rs
-pub const SH1107G_INIT_CMDS: &[u8] = &[
-    0xAE, // Display OFF
-    0xDC, 0x00, // Display start line = 0
-    0x81, 0x2F, // Contrast
-    0x20,  0x02, // Memory addressing mode: page
-    0xA0, // Segment remap normal
-    0xC0, // Common output scan direction normal
-    0xA4, // Entire display ON from RAM
-    0xA6, // Normal display
-    0xA8, 0x7F, // Multiplex ratio 128
-    0xD3, 0x60, // Display offset
-    0xD5, 0x51, // Oscillator frequency
-    0xD9, 0x22, // Pre-charge period
-    0xDB, 0x35, // VCOM deselect level
-    0xAD, 0x8A, // DC-DC control
-    0xAF,       // Display ON
+pub const SH1107G_INIT_CMDS: &[&[u8]] = &[
+    &[0xAE],       // Display OFF
+    &[0xD5, 0x51], // Display clock divide/oscillator freq
+    &[0xA8, 0x7F], // Multiplex ratio 128 (for SH1107G full 128 rows)
+    &[0xD3, 0x60], // Display offset
+    &[0x40],       // Display start line = 0
+    &[0xA1],       // Segment remap (mirror horizontally, often needed)
+    &[0xC8],       // COM scan direction remapped (vertical flip)
+    &[0x81, 0x2F], // Contrast
+    &[0xAD, 0x8A], // DC-DC control (internal regulator)
+    &[0xD9, 0x22], // Pre-charge period
+    &[0xDB, 0x35], // VCOM deselect level
+    &[0xA4],       // Entire display ON from RAM
+    &[0xA6],       // Normal display
+    // Init page addresses (set each page pointer to column 0)
+    &[0xB0, 0x00, 0x00],
+    &[0xB1, 0x00, 0x00],
+    &[0xB2, 0x00, 0x00],
+    &[0xB3, 0x00, 0x00],
+    &[0xB4, 0x00, 0x00],
+    &[0xB5, 0x00, 0x00],
+    &[0xB6, 0x00, 0x00],
+    &[0xB7, 0x00, 0x00],
+    &[0xB8, 0x00, 0x00],
+    &[0xB9, 0x00, 0x00],
+    &[0xBA, 0x00, 0x00],
+    &[0xBB, 0x00, 0x00],
+    &[0xBC, 0x00, 0x00],
+    &[0xBD, 0x00, 0x00],
+    &[0xBE, 0x00, 0x00],
+    &[0xBF, 0x00, 0x00],
+    &[0xAF],       // Display ON
+    &[0xA5],       // All pixels ON
 ];

@@ -17,38 +17,36 @@ where
     }
 
     pub fn send_cmd(&mut self, cmd: &[u8]) -> Result<(), Sh1107gError<E>> {
-        self.send(0x80, cmd)
+        self.send(0x00, cmd)
     }
 
     pub fn init(&mut self) -> Result<(), Sh1107gError<E>> {
+    for cmd in SH1107G_INIT_CMDS {
+    self.send_cmd(cmd)?;
+}
 
-        for cmd in SH1107G_INIT_CMDS {
-            self.send(0x80, core::slice::from_ref(cmd))?;
+    Ok(())
+}
+
+pub fn flush(&mut self) -> Result<(), Sh1107gError<E>> {
+    let page_count = crate::DISPLAY_HEIGHT / 8;
+    let page_width = crate::DISPLAY_WIDTH;
+
+    for page in 0..page_count {
+        self.send_cmd(&[0xB0 + page as u8])?;
+        self.send_cmd(&[0x00])?;
+        self.send_cmd(&[0x10])?;
+
+        let start = page * page_width;
+        let end = start + page_width;
+        let mut temp_buffer = Vec::<u8, { crate::DISPLAY_WIDTH }>::new();
+        temp_buffer.extend_from_slice(&self.buffer[start..end]).map_err(|_| Sh1107gError::PayloadOverflow)?;
+
+        for chunk in temp_buffer.chunks(31) {
+            self.send(0x40, chunk)?;
         }
-
-        Ok(())
     }
+    Ok(())
+}
 
-    pub fn flush(&mut self) -> Result<(), Sh1107gError<E>> {
-        let page_count = crate::DISPLAY_HEIGHT / 8;
-        let page_width = crate::DISPLAY_WIDTH;
-
-        for page in 0..page_count {
-            self.send_cmd(&[0xB0 + page as u8])?;
-            self.send_cmd(&[0x00])?;
-            self.send_cmd(&[0x10])?;
-
-            let start = page * page_width;
-            let end = start + page_width;
-
-            let mut page_buf = Vec::<u8, { crate::DISPLAY_WIDTH }>::new();
-            page_buf.extend_from_slice(&self.buffer[start..end])
-                .map_err(|_| Sh1107gError::PayloadOverflow)?;
-
-            for chunk in page_buf.chunks(32 - 1) {
-                self.send(0x40, chunk)?;
-            }
-        }
-        Ok(())
-    }
 }
