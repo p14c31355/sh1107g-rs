@@ -1,169 +1,135 @@
 #![no_std]
-/// SH1107G I2C OLED driver
-pub mod cmds;
 
+pub mod cmds;
+pub mod error;
 #[cfg(feature = "sync")]
 pub mod sync;
 
-#[cfg(feature = "async_")]
-pub mod async_;
-
 use embedded_graphics_core::{
     draw_target::DrawTarget,
+    geometry::{Dimensions, Point, Size},
     pixelcolor::BinaryColor,
+    primitives::Rectangle,
     Pixel,
 };
-use core::convert::Infallible;
-use core::result::Result;
-use core::option::Option::{self, Some, None};
-use core::result::Result::Ok;
-use core::fmt::Debug;
-use core::iter::IntoIterator;
 
-/*
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum DisplayRotation {
-    Rotate0,
-    Rotate90,
-    Rotate180,
-    Rotate270,
-}
-
-// Default process
-impl Default for DisplayRotation {
-    fn default() -> Self {
-        DisplayRotation::Rotate0
-    }
-}
-*/
-
-/// common
-use embedded_graphics_core::geometry::{Dimensions, Point, Size};
+pub const DISPLAY_WIDTH: usize = 128;
+pub const DISPLAY_HEIGHT: usize = 128;
+pub const PAGE_HEIGHT: usize = 8;
+pub const COLUMN_OFFSET: usize = 2;
+pub const I2C_MAX_WRITE: usize = 32;
+pub const BUFFER_SIZE: usize = DISPLAY_WIDTH * DISPLAY_HEIGHT / 8;
 
 pub struct Sh1107g<I2C> {
     pub(crate) i2c: I2C,
     pub(crate) address: u8,
-    pub(crate) buffer: [u8; BUFFER_SIZE], // Internal buffer
-    // Configure in builder to Sh1107g struct
+    pub(crate) buffer: [u8; BUFFER_SIZE],
 }
 
-impl <I2C> Sh1107g<I2C> {
-    // Make new driver instance & Degine function called by the builder
-    // Initialise the internal buffer when called by builder
+impl<I2C, E> Sh1107g<I2C>
+where
+    I2C: embedded_hal::i2c::I2c<Error = E>,
+    E: embedded_hal::i2c::Error,
+{
     pub fn new(i2c: I2C, address: u8) -> Self {
         Self {
             i2c,
             address,
-            buffer: [0x00; BUFFER_SIZE], // 全てオフで初期化
+            buffer: [0u8; BUFFER_SIZE],
         }
     }
 
-    /// 内部バッファをクリアする
+    pub fn buffer_mut(&mut self) -> &mut [u8] {
+        &mut self.buffer
+    }
+
     pub fn clear_buffer(&mut self) {
-        self.buffer.iter_mut().for_each(|b| *b = 0x00);
+        self.buffer.fill(0x00);
     }
 }
-// Builder struct
-pub struct Sh1107gBuilder<I2C> {
-    i2c: Option<I2C>,
-    address: u8,      // Configure default address or choice Option type
-    // If you can add more settings value rotation: DisplayRotation,etc...
+
+pub struct Sh1107gBuilder<'a, I2C> {
+    i2c: Option<&'a mut I2C>,
+    address: u8,
+    clear_on_init: bool,
 }
 
-// Sh1107gBuilder implement block
-impl<I2C> Sh1107gBuilder<I2C> {
-    /// Make new builder instance
-    /// Designation default I2C address
-    pub fn new() -> Self {
+impl<'a, I2C, E> Sh1107gBuilder<'a, I2C>
+where
+    I2C: embedded_hal::i2c::I2c<Error = E>,
+    E: embedded_hal::i2c::Error,
+{
+    pub fn new(i2c: &'a mut I2C) -> Self {
         Self {
-            i2c: None,
-            address: 0x3C, // default
-            // size: None,
-            // rotation: DisplayRotation::default(),
+            i2c: Some(i2c),
+            address: 0x3C,
+            clear_on_init: false,
         }
     }
 
-    /// Connect I2C
-    pub fn connect_i2c(mut self, i2c: I2C) -> Self {
-        self.i2c = Some(i2c);
-        self
-    }
-
-    /// Configure I2C address
     pub fn with_address(mut self, address: u8) -> Self {
         self.address = address;
         self
     }
+    
+    pub fn clear_on_init(mut self, enable: bool) -> Self {
+        self.clear_on_init = enable;
+        self
+    }
 
-    // If you need other method, add other setting method, example: size,rotate,etc...
-}
-
-// Define error enum in builder
-#[derive(Debug)]
-pub enum BuilderError {
-    NoI2cConnected,
-    // NoDisplaySizeDefined, // サイズが必須の場合
-}
-// embedded-halのErrorトレイトにも対応させる必要があるかもしれません
-// impl embedded_hal::i2c::Error for BuilderError { ... }
-// impl From<BuilderError> for YourDriverError { ... } など
-
-// define display size
-pub const DISPLAY_WIDTH: u32 = 128;
-pub const DISPLAY_HEIGHT: u32 = 128;
-pub const BUFFER_SIZE: usize = (DISPLAY_WIDTH * DISPLAY_HEIGHT / 8) as usize;
-
-// Sh1107g に Dimensions トレイトを実装
-impl<I2C> Dimensions for Sh1107g<I2C> {
-    fn bounding_box(&self) -> embedded_graphics_core::primitives::Rectangle {
-        embedded_graphics_core::primitives::Rectangle::new(
-            Point::new(0, 0),
-            Size::new(DISPLAY_WIDTH, DISPLAY_HEIGHT),
-        )
+    pub fn build(mut self) -> Sh1107g<&'a mut I2C> {
+        let i2c = self.i2c.take().unwrap();
+        let mut display = Sh1107g::new(i2c, self.address);
+        if self.clear_on_init {
+            display.clear_buffer();
+        }
+        display
     }
 }
 
-impl<I2C> DrawTarget for Sh1107g<I2C> {
-    // DrawTarget define color dimension (monochro OLED = BinaryColor)
+impl<I2C, E> Dimensions for Sh1107g<I2C>
+where
+    I2C: embedded_hal::i2c::I2c<Error = E>,
+    E: embedded_hal::i2c::Error,
+{
+    fn bounding_box(&self) -> Rectangle {
+        Rectangle::new(Point::new(0, 0), Size::new(DISPLAY_WIDTH as u32, DISPLAY_HEIGHT as u32))
+    }
+}
+
+impl<I2C, E> DrawTarget for Sh1107g<I2C>
+where
+    I2C: embedded_hal::i2c::I2c<Error = E>,
+    E: embedded_hal::i2c::Error,
+{
     type Color = BinaryColor;
-    type Error = Infallible; // embedded-halのI2Cエラーをそのまま使う
-    
-    /// ピクセルを描画する主要なメソッド
+    type Error = core::convert::Infallible;
+
     fn draw_iter<PIXELS>(&mut self, pixels: PIXELS) -> Result<(), Self::Error>
     where
         PIXELS: IntoIterator<Item = Pixel<Self::Color>>,
     {
         for Pixel(Point { x, y }, color) in pixels {
-            // 座標がディスプレイ範囲内かチェック
             if x < 0 || x >= DISPLAY_WIDTH as i32 || y < 0 || y >= DISPLAY_HEIGHT as i32 {
-                continue; // 範囲外のピクセルはスキップ
+                continue;
             }
 
-            // ピクセル座標からバッファのインデックスとビットマスクを計算
-            // SH1107Gはページアドレッシングモードで、各バイトが縦8ピクセル
-            let byte_index = (x as usize) + (y as usize / 8) * (DISPLAY_WIDTH as usize);
-            let bit_mask = 1 << (y % 8); // バイト内のビット位置
+            let page_idx = y as usize / 8;
+            let col_idx = x as usize;
+            let byte_index = col_idx + (page_idx * DISPLAY_WIDTH);
 
-            // バッファの範囲チェック（念のため）
-            if byte_index >= BUFFER_SIZE {
-                continue; // バッファ範囲外もスキップ
-            }
+            let bit_mask = 1 << (y % 8);
 
-            // 色に応じてバッファのビットをセットまたはクリア
             match color {
-                BinaryColor::On => self.buffer[byte_index] |= bit_mask,  // ピクセルをON (セット)
-                BinaryColor::Off => self.buffer[byte_index] &= !bit_mask, // ピクセルをOFF (クリア)
+                BinaryColor::On => self.buffer[byte_index] |= bit_mask,
+                BinaryColor::Off => self.buffer[byte_index] &= !bit_mask,
             }
         }
         Ok(())
     }
-
-    /// Fill in with color
+    
     fn clear(&mut self, color: Self::Color) -> Result<(), Self::Error> {
-        let fill_byte = match color {
-            BinaryColor::On => 0xFF,
-            BinaryColor::Off => 0x00,
-        };
+        let fill_byte = match color { BinaryColor::On => 0xFF, BinaryColor::Off => 0x00 };
         self.buffer.iter_mut().for_each(|b| *b = fill_byte);
         Ok(())
     }
